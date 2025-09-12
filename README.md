@@ -36,10 +36,10 @@ The material includes slides with theory concepts and practical exercises.
   
 ### Day 4
 
-- **Talk 6:** [Scripting and parallelization](slides/xxxxx.pdf)
-- **Exercise 7:** [Scripting and parallelization](exercises/07_handson_scripting_and_parallelization/handson_scripting_and_parallelization.md)
-- **Talk 7:** [Building a reliable and reproducible scientific workflow using Nextflow](slides/xxxxx.pdf)
-- **Exercise 8:** [Building a reliable and reproducible scientific workflow using Nextflow](exercises/08_handson_scientific_workflows_nextflow/handson_scientificworkflows_nextflow.md)
+- **Talk 6:** [Scripting and parallelization](slides/talk6_Scripting_and_Parallelization.pdf)
+- **Exercise 7:** [Scripting and parallelization](exercises/07_handson_scripting_and_parallelization/handson_scripting_and_parallelization.md) -- [Download pdf](exercises/xxxx.pdf)
+- **Talk 7:** [Building a reliable and reproducible scientific workflow using Nextflow](slides/talk7_ReliableReproducible_ScientificWorkflows_Nextflow.pdf)
+- **Exercise 8:** [Building a reliable and reproducible scientific workflow using Nextflow](exercises/08_handson_scientific_workflows_nextflow/handson_scientificworkflows_nextflow.md) -- [Download pdf](exercises/xxx.pdf)
 
 ### Day 5
 

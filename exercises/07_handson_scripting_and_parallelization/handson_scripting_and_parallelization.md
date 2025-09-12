@@ -1,4 +1,17 @@
-# HandsOn: HPC Scripting and Parallelization SLURM
+# Curso Práctico de Iniciación al uso del Entorno de Alta Computación
+
+BU-ISCIII
+
+## Práctica 9: Scripting and Parallelization on HPC (Slurm)
+
+Bienvenido a la sesión práctica sobre scripting y paralelización en nuestro HPC. En esta práctica aprenderás a lanzar scripts `sbatch` al sistema de colas, escalarás cargas de trabajo pesadas y repetitivas usando Job Arrays y finalmente compararás estrategias de parallelización en HPC con OpenMP vs MPI.
+
+- [Curso Práctico de Iniciación al uso del Entorno de Alta Computación](#curso-práctico-de-iniciación-al-uso-del-entorno-de-alta-computación)
+  - [Práctica 9: Scripting and Parallelization on HPC (Slurm)](#práctica-9-scripting-and-parallelization-on-hpc-slurm)
+  - [1. Envío de trabajos con `sbatch` (Slurm)](#1-envío-de-trabajos-con-sbatch-slurm)
+  - [2. Job Arrays (Slurm)](#2-job-arrays-slurm)
+  - [3. OpenMP vs MPI](#3-openmp-vs-mpi)
+
 
 ## 1. Envío de trabajos con `sbatch` (Slurm)
 
