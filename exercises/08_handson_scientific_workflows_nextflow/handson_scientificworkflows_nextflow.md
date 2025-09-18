@@ -1,4 +1,20 @@
-# HandsOn: Scientific workflows con Nextflow (mini-preview)
+# Curso Práctico de Iniciación al uso del Entorno de Alta Computación
+
+BU-ISCIII
+
+## Práctica 10: Scientific Workflows with Nextflow (Slurm)
+
+Bienvenido a la sesión práctica sobre flujos de trabajo científicos con Nextflow en nuestro HPC. Verás por qué encadenar trabajos o tareas con `sbatch` es tedioso y sensible a errores humanos. Aprenderás como Nextflow es una potente herramienta para solventar estas limitaciones. Además, ejecutaremos un pipeline demo de Nextflow integrado en Slurm ([nf-core/demo](https://nf-co.re/demo/dev/)), y posteriormente, haremos frente a un caso de análisis real usando el pipeline [nf-core/bacass](https://nf-co.re/bacass/dev/).
+
+- [Curso Práctico de Iniciación al uso del Entorno de Alta Computación](#curso-práctico-de-iniciación-al-uso-del-entorno-de-alta-computación)
+  - [Práctica 10: Scientific Workflows with Nextflow (Slurm)](#práctica-10-scientific-workflows-with-nextflow-slurm)
+  - [Descripción](#descripción)
+  - [A) El “antes”: encadenar tareas a mano con Slurm](#a-el-antes-encadenar-tareas-a-mano-con-slurm)
+  - [B) Nextflow con Slurm: **nf-demo**](#b-nextflow-con-slurm-nf-demo)
+  - [C) Caso real: **nf-core/bacass**](#c-caso-real-nf-corebacass)
+  - [D) Comparativa explícita: manual vs Nextflow (qué gana el alumno)](#d-comparativa-explícita-manual-vs-nextflow-qué-gana-el-alumno)
+  - [E) Errores frecuentes y cómo resolverlos (rápido)](#e-errores-frecuentes-y-cómo-resolverlos-rápido)
+  - [Checklist de lo que debes hacer/tocar](#checklist-de-lo-que-debes-hacertocar)
 
 ## Descripción
 
@@ -20,7 +36,7 @@ Ejercicios que vamos a **realizar** en esta sesión:
 
 ---
 
-## A) El “antes”: encadenar a mano con Slurm (visión rápida)
+## A) El “antes”: encadenar tareas a mano con Slurm
 
 > *No lo ejecutes ahora; es para comparar mentalmente con Nextflow.*
 
