@@ -320,6 +320,15 @@ channels:
   - conda-forge
 channel_priority: strict
 ```
+- Si a pesar de esto no os deja instalar, probad a modificar el archivo para que **solo** tenga el contenido anterior:
+```bash
+# Borrar todo lo anterior y dejar solo esto:
+auto_activate_base: false
+channels:
+  - conda-forge
+channel_priority: strict
+# Guardar y salir
+```
 
 - Con esto ya tendríamos un entorno virtual, pero nosotros vamos a ir más allá, creando un entorno virtual personalizado con `micromamba create`:
 
