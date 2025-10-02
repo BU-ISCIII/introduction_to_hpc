@@ -518,9 +518,7 @@ bash ~/bin/hpc_cp.sh "data->scratch" <DATE>HPC-COURSE_<USER>
 
 ```bash
 # Lo hemos configurado antes en nuestro bashrc
-scratch
 cd /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/09-use-cases
-mkdir -p logs
 sbatch ./bacass_test.sbatch
 ```
 
@@ -584,6 +582,12 @@ nextflow run nf-core/bacass \
   --input samplesheet.csv \
   --outdir 02-nextflow-bacass-results \
   -resume
+```
+
+```bash
+## Sal del nodo de computo y ejecuta el script
+exit
+sbatch nextflow_bacass.sbatch
 ```
 
 > **Tip**: muchos pipelines nf-core aceptan `--input` (o `--samplesheet` según release). Verifica con `-help`.
