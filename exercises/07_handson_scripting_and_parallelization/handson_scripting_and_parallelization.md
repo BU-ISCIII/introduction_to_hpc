@@ -132,8 +132,8 @@ cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/%_*2*.fastq.gz %_R2.fas
 
    ```bash
    srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
-     rsync -avh /data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/07-scripting-and-parallelization \
-     /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/
+     rsync -avh /data/courses/hpc_course/*HPC-COURSE_${USER} \
+     /scratch/hpc_course/
    ```
 
 A partir de ahora trabaja desde `/scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/07-scripting-and-parallelization` y mantén los nombres de archivo tal como figuran en el repositorio original.
