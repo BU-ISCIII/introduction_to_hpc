@@ -9,6 +9,7 @@ BU-ISCIII
 - [Curso Práctico de Iniciación al uso del Entorno de Alta Computación](#curso-práctico-de-iniciación-al-uso-del-entorno-de-alta-computación)
   - [Práctica 1: Comandos básicos de Linux](#práctica-1-comandos-básicos-de-linux)
     - [Índice](#índice)
+    - [Preparación de MobaXterm](#preparación-de-mobaxterm)
     - [Descripción](#descripción)
     - [Notas importantes](#notas-importantes)
     - [Cheats](#cheats)
@@ -31,6 +32,16 @@ BU-ISCIII
       - [16. Usuarios](#16-usuarios)
       - [17. Super usuario](#17-super-usuario)
     - [Nota final](#nota-final)
+
+### Preparación de MobaXterm
+
+Si utilizas MobaXterm en Windows, abre una terminal local de MobaXterm y ejecuta el siguiente comando antes de comenzar la práctica para instalar las herramientas necesarias:
+
+```bash
+apt-get install coreutils wget tar xz cpio nc sed findutils jq unzip
+```
+
+Realiza esta instalación en la terminal local de MobaXterm antes de conectarte al HPC por SSH.
 
 ### Descripción
 
