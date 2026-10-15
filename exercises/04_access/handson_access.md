@@ -83,7 +83,7 @@ Muestra información sobre cada paso de la conexión SSH. Útil para identificar
 Output:
 
 ```bash
- ✘  smonzon@PC-M007021  ssh -v -p 32122 smonzon@portutatis.isciii.es 
+ ✘  smonzon@PC-M007021  ssh -v -p 32122 smonzon@portutatis.isciii.es
 OpenSSH_9.6p1 Ubuntu-3ubuntu13.13, OpenSSL 3.0.13 30 Jan 2024
 debug1: Reading configuration data /home/smonzon/.ssh/config
 debug1: /home/smonzon/.ssh/config line 16: Applying options for portutatis.isciii.es
@@ -144,13 +144,13 @@ No Kerberos credentials available (default cache: FILE:/tmp/krb5cc_1212)
 debug1: No credentials were supplied, or the credentials were unavailable or inaccessible
 No Kerberos credentials available (default cache: FILE:/tmp/krb5cc_1212)
 debug1: Next authentication method: publickey
-debug1: Will attempt key: /home/smonzon/.ssh/id_rsa 
-debug1: Will attempt key: /home/smonzon/.ssh/id_ecdsa 
-debug1: Will attempt key: /home/smonzon/.ssh/id_ecdsa_sk 
+debug1: Will attempt key: /home/smonzon/.ssh/id_rsa
+debug1: Will attempt key: /home/smonzon/.ssh/id_ecdsa
+debug1: Will attempt key: /home/smonzon/.ssh/id_ecdsa_sk
 debug1: Will attempt key: /home/smonzon/.ssh/id_ed25519 ED25519 SHA256:mwmdFtDTXOXTChh+RKun1e9igQ3jt6ldU7Gd/XaALpk
-debug1: Will attempt key: /home/smonzon/.ssh/id_ed25519_sk 
-debug1: Will attempt key: /home/smonzon/.ssh/id_xmss 
-debug1: Will attempt key: /home/smonzon/.ssh/id_dsa 
+debug1: Will attempt key: /home/smonzon/.ssh/id_ed25519_sk
+debug1: Will attempt key: /home/smonzon/.ssh/id_xmss
+debug1: Will attempt key: /home/smonzon/.ssh/id_dsa
 debug1: Trying private key: /home/smonzon/.ssh/id_rsa
 debug1: Trying private key: /home/smonzon/.ssh/id_ecdsa
 debug1: Trying private key: /home/smonzon/.ssh/id_ecdsa_sk
@@ -160,10 +160,10 @@ debug1: Trying private key: /home/smonzon/.ssh/id_ed25519_sk
 debug1: Trying private key: /home/smonzon/.ssh/id_xmss
 debug1: Trying private key: /home/smonzon/.ssh/id_dsa
 debug1: Next authentication method: password
-smonzon@portutatis.isciii.es's password: 
+smonzon@portutatis.isciii.es's password:
 debug1: Authentications that can continue: publickey,gssapi-keyex,gssapi-with-mic,password
 Permission denied, please try again.
-smonzon@portutatis.isciii.es's password: 
+smonzon@portutatis.isciii.es's password:
 Authenticated to portutatis.isciii.es ([172.21.7.100]:32122) using "password".
 debug1: channel 0: new session [client-session] (inactive timeout: 0)
 debug1: Requesting no-more-sessions@openssh.com
@@ -249,9 +249,9 @@ Output:
 /home/usuario
 
 drwxr-xr-x  10 root   root   4096 Jul 10 10:00 bin
-...  
+...
 drwxr-xr-x   5 root root 4096 Jul 20 12:34 data
-...  
+...
 drwxr-xr-x   5 root root 4096 Jul 20 12:34 scratch
 ```
 
@@ -388,46 +388,45 @@ El comando `ssh-keygen` genera una nueva clave pública/privada en el directorio
 ```bash
 wget --content-disposition -P hpc_isciii_data https://zenodo.org/api/records/17207071/files-archive
 cd hpc_isciii_data
-unzip 17207071.zip
 ```
 
-- Abrimos WSL
+- Nos movemos a donde hemos descargado los datos:
 
 ```bash
 cd /path/to/where/hpc_isciii_data_is
-scp -r -P 32122 hpc_isciii_data usuario@portutatis.isciii.es:/home/usuario
+scp -r -P 32122 hpc_isciii_data usuario@portutatis.isciii.es:/home/hpc_course/usuario
 ```
 
 Output:
 
 ```bash
-ERR2261315_2.fastq.gz                                                                                                                                                            100%   99MB  54.9MB/s   00:01    
-ERR2261314_2.fastq.gz                                                                                                                                                            100%   95MB  52.9MB/s   00:01    
-ERR2261314_1.fastq.gz                                                                                                                                                            100%   76MB  54.0MB/s   00:01    
-ERR2261318_2.fastq.gz                                                                                                                                                            100%  140MB  53.3MB/s   00:02    
-ERR2261315_1.fastq.gz                                                                                                                                                            100%   81MB  53.8MB/s   00:01    
-ERR2261318_1.fastq.gz                                                                                                                                                            100%  116MB  53.1MB/s   00:02    
-virus1_R2.fastq.gz                                                                                                                                                               100%   13MB  46.9MB/s   00:00    
-virus1_R1.fastq.gz                                                                                                                                                               100%   13MB  62.2MB/s   00:00  
+ERR2261315_2.fastq.gz                                                                                                                                                            100%   99MB  54.9MB/s   00:01
+ERR2261314_2.fastq.gz                                                                                                                                                            100%   95MB  52.9MB/s   00:01
+ERR2261314_1.fastq.gz                                                                                                                                                            100%   76MB  54.0MB/s   00:01
+ERR2261318_2.fastq.gz                                                                                                                                                            100%  140MB  53.3MB/s   00:02
+ERR2261315_1.fastq.gz                                                                                                                                                            100%   81MB  53.8MB/s   00:01
+ERR2261318_1.fastq.gz                                                                                                                                                            100%  116MB  53.1MB/s   00:02
+virus1_R2.fastq.gz                                                                                                                                                               100%   13MB  46.9MB/s   00:00
+virus1_R1.fastq.gz                                                                                                                                                               100%   13MB  62.2MB/s   00:00
 ```
 
 #### Descargar archivo con `scp`
 
 ```bash
-scp -P 32122 usuario@portutatis.isciii.es:/home/usuario/hpc_isciii_data/ERR2261314_1.fastq.gz ./
+scp -P 32122 usuario@portutatis.isciii.es:/home/hpc_course/usuario/hpc_isciii_data/ERR2261314_1.fastq.gz ./
 ```
 
 Output:
 
 ```bash
 ERR2261314_1.fastq.gz
-                                                                                                 100%   76MB  89.5MB/s   00:00  
+                                                                                                 100%   76MB  89.5MB/s   00:00
 ```
 
 #### Sincronizar carpeta con `rsync`
 
 ```bash
-rsync -avz -e "ssh -p 32122" hpc_isciii_data usuario@portutatis.isciii.es:/home/usuario
+rsync -avz -e "ssh -p 32122" hpc_isciii_data usuario@portutatis.isciii.es:/home/hpc_course/usuario
 ```
 
 Output:
@@ -479,8 +478,8 @@ Resumen:
 # En nuestro ordenador local creamos el fichero md5sum de los ficheros
 cd /path/to/hpc_isciii_data
 md5sum *.gz > md5sum.md5
-scp -P 32122 md5sum.md5 usuario@portutatis.isciii.es:/home/usuario/hpc_isciii_data
-ssh -p 32122 usuario@portutatis.isciii.es "cd /home/usuario/hpc_isciii_data;md5sum -c md5sum.md5"
+scp -P 32122 md5sum.md5 usuario@portutatis.isciii.es:/home/hpc_course/usuario/hpc_isciii_data
+ssh -p 32122 usuario@portutatis.isciii.es "cd /home/hpc_course/usuario/hpc_isciii_data;md5sum -c md5sum.md5"
 ```
 
 Output:
@@ -540,7 +539,7 @@ ANALYSIS  DOC  RAW  REFERENCES  RESULTS  TMP
 - Ahora ya podemos copiar los ficheros que hemos subido al HPC a la estructura de carpetas que hemos creado. Como son ficheros crudos de secuenciación los copiaremos en `RAW`.
 
 ```bash
-cd /home/usuaio
+cd /home/hpc_course/usuario
 rsync -rlv hpc_isciii_data/* /data/courses/hpc_course/$(date +%Y%m%d)_HPC-COURSE_${USER}/RAW
 ```
 
