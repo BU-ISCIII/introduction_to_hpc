@@ -134,12 +134,35 @@ En otra terminal de MobaXterm puedes observar tanto el controlador como las tare
 watch -n 2 'squeue --me'
 ```
 
-Cuando el trabajo finalice, revisa primero el estado de Slurm y el log del controlador:
+El trabajo `nf_demo` que enviaste con `sbatch` es el **controlador**: ejecuta Nextflow, interpreta el pipeline y envía a Slurm las tareas que ya tienen disponibles sus datos de entrada. No ejecuta necesariamente el análisis en sí. A medida que terminan tareas, Nextflow detecta sus salidas, desbloquea los procesos dependientes y envía los siguientes trabajos. Así se respeta el orden definido por los datos, sin construir a mano dependencias `afterok`.
+
+Mientras está en marcha, el `stdout` que va escribiendo Nextflow se encuentra en el fichero `.out` del trabajo controlador. Sustituye `<JOBID>` por el identificador que devolvió `sbatch` y sigue el progreso con:
+
+```bash
+tail -f "logs/nf_demo-<JOBID>.out"
+```
+
+Pulsa `Ctrl+C` para dejar de seguir el fichero; el trabajo continúa ejecutándose. Los avisos y errores enviados a `stderr` quedan en `logs/nf_demo-<JOBID>.err`.
+
+Cuando el trabajo finalice, revisa el estado de Slurm y los registros:
 
 ```bash
 sacct -j <JOBID> -o JobID,JobName,State,Elapsed,MaxRSS,AllocCPUS,ExitCode
 less "logs/nf_demo-<JOBID>.out"
 less "logs/nf_demo-<JOBID>.err"
+tail -n 50 .nextflow.log
+```
+
+Nextflow crea varios directorios y ficheros de control dentro del directorio de ejecución:
+
+- `01-nextflow-demo-results/` (el valor de `--outdir`) contiene los resultados finales que el pipeline publica para consultar o conservar. Es el directorio de salida útil del análisis.
+- `work/` (el valor de `-work-dir`) contiene un subdirectorio por tarea, identificado por un *hash*. Ahí Nextflow prepara enlaces o copias de las entradas, ejecuta el comando y guarda sus salidas y sus logs. Es su caché: no se edita manualmente y debe conservarse para que `-resume` pueda reutilizar tareas completadas.
+- `.nextflow.log` es el registro detallado del propio motor Nextflow: decisiones de planificación, tareas enviadas, caché y errores. Es especialmente útil cuando el `.err` del controlador no basta para diagnosticar un problema.
+
+Puedes comprobar esa estructura con:
+
+```bash
+find work -maxdepth 2 -type f \( -name '.command.sh' -o -name '.command.out' -o -name '.command.err' \) | head
 tail -n 50 .nextflow.log
 ```
 
@@ -150,8 +173,6 @@ find 01-nextflow-demo-results -maxdepth 3 -type f | sort
 ls -lh trace.txt report.html timeline.html
 ```
 
-- `01-nextflow-demo-results/` contiene los resultados publicados por el pipeline.
-- `work/` es la caché de tareas; no la edites a mano.
 - `trace.txt` relaciona procesos, recursos y estado.
 - `report.html` y `timeline.html` permiten revisar gráficamente la ejecución.
 
