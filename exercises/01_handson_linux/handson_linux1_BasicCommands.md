@@ -64,7 +64,7 @@ El objetivo es realizar, desde la línea de comandos, aquellas tareas cotidianas
 
 > Nota: En [este archivo](./esquema_practica_comandos.pdf) hay un esquema con los cambios en las rutas que se van realizando a lo largo de la práctica.
 
-Abrimos una terminal en nuestro ordenador. En Linux se puede pulsar `Ctrl + Alt + T` para abrir una terminal. En windows podemos utilizar abrir una powershell para poder usar comandos de terminal de windows, o también tenemos acceso a un subsistema de linux integrado, el WSL. Este WSL podemos usarlo directamente buscando `Ubuntu` en nuestras aplicaciones, o bien a través de VSCode y su terminal.
+Abrimos una terminal en nuestro ordenador. En Linux se puede pulsar `Ctrl + Alt + T` para abrir una terminal. En windows podemos utilizar abrir una powershell para poder usar comandos de terminal de windows, o también tenemos acceso a un subsistema de linux integrado, el WSL. Este WSL podemos usarlo directamente buscando `Ubuntu` en nuestras aplicaciones, o bien a través de MobaXterm y su terminal. En MobaXterm le damos a "Start local terminal" y se nos abre un nuevo terminal.
 
 En estas prácticas vamos a usar WSL
 
