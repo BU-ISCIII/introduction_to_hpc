@@ -4,22 +4,44 @@
 #SBATCH --nodes=2                 # <-- nº de nodos
 #SBATCH --ntasks=8                # total procesos MPI
 #SBATCH --ntasks-per-node=4       # <-- nº procesos MPI por nodo
+#SBATCH --cpus-per-task=2         # dos hilos por proceso MPI híbrido
 #SBATCH --mem=8G
 #SBATCH --time=00:30:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
+set -euo pipefail
+
 module load RAxML/8.2.12-gompi-2020a-hybrid-avx2  # el módulo puede traer varios binarios
 
-RUNNAME="ML_bootstrap"
+RUNNAME="ML_searches"
 mkdir -p 05-raxml_mpi-results
-RESULTS_DIR="/scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/07-scripting-and-parallelization/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
+RESULTS_DIR="$PWD/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
 mkdir -p "$RESULTS_DIR"
 
-mpirun -np "$SLURM_NTASKS" raxmlHPC \
-  -s data/datos.phy \
-  -m GTRGAMMA \
+RAXML_BIN=""
+for candidate in raxmlHPC-MPI-AVX2 raxmlHPC-MPI-AVX raxmlHPC-MPI \
+                 raxmlHPC-HYBRID-AVX2 raxmlHPC-HYBRID-AVX raxmlHPC-HYBRID; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    RAXML_BIN="$candidate"
+    break
+  fi
+done
+[[ -n "$RAXML_BIN" ]] || { echo "[ERROR] No MPI-enabled RAxML executable found." >&2; exit 127; }
+
+RAXML_THREADS=()
+if [[ "$RAXML_BIN" == *HYBRID* ]]; then
+  RAXML_THREADS=(-T "$SLURM_CPUS_PER_TASK")
+fi
+
+# Pausa didáctica: permite observar la reserva multinodo con squeue.
+echo "[INFO] Recursos MPI reservados; RAxML comenzará en 20 segundos."
+sleep 20
+
+mpirun -np "$SLURM_NTASKS" "$RAXML_BIN" "${RAXML_THREADS[@]}" \
+  -s raxml_demo.phy \
+  -m GTRCAT \
   -p 12345 \
-  -# 20 \
+  -# 8 \
   -n "$RUNNAME" \
   -w "$RESULTS_DIR"
