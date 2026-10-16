@@ -102,9 +102,19 @@ pwd
 
 Los tres scripts usan rutas relativas desde `07-scripting-and-parallelization`; por ello se envían con `--chdir` y no contienen rutas absolutas con comodines. Todos comienzan con `set -euo pipefail`, de modo que un comando que falla hace fallar el trabajo y Slurm registra un código de salida distinto de cero.
 
+`set -euo pipefail` hace el script más estricto: detiene la ejecución si falla un comando (`-e`), si se usa una variable que no existe (`-u`) o si falla algún comando dentro de una tubería (`pipefail`). Debe aparecer después de las directivas `#SBATCH`.
+
+> **Idea clave:** sin esta línea, un script puede mostrar un error y continuar hasta terminar aparentemente bien; con ella, Slurm puede marcarlo como `FAILED` y el `ExitCode` de `sacct` sirve para diagnosticarlo.
+
 ### Ejercicio 1 — FastQC correcto
 
-Revisa primero el script y envíalo:
+Revisa primero el script. Antes de enviarlo, abre una **segunda pestaña de MobaXterm** conectada al HPC y deja este comando ejecutándose. Se actualizará cada segundo; termina con `Ctrl+C` cuando el trabajo desaparezca de la cola.
+
+```bash
+watch -n 1 'squeue --me'
+```
+
+En la primera pestaña, envía el trabajo:
 
 ```bash
 less fastqc_demo.sbatch
@@ -130,9 +140,10 @@ Preguntas:
 
 ### Ejercicio 2 — Fallo por una entrada inexistente
 
-`fastqc_failcmd.sbatch` referencia deliberadamente `does_not_exist_R1.fastq.gz`. No cambies el script antes de enviarlo.
+`fastqc_failcmd.sbatch` referencia deliberadamente un FASTQ inexistente (`does_not_exist_R1.fastq.gz`). No cambies el script antes de enviarlo.
 
 ```bash
+less fastqc_failcmd.sbatch
 sbatch --chdir="$PWD" fastqc_failcmd.sbatch
 sacct -j <JOBID> -o JobID,State,Elapsed,ExitCode
 tail -n 20 "logs/fastqc_fail-<JOBID>.err"
@@ -141,26 +152,32 @@ tail -n 20 "logs/fastqc_fail-<JOBID>.err"
 Preguntas:
 
 1. ¿Qué fichero indica FastQC que no puede leer?
-2. ¿Qué `ExitCode` aparece? ¿Por qué ahora no termina como `COMPLETED`?
-3. ¿Cuál sería el cambio mínimo para corregirlo?
+2. ¿Qué `ExitCode` aparece? En esta versión de FastQC, ¿el aviso sobre el fichero ausente hace que el trabajo termine como `FAILED` o como `COMPLETED`?
+3. Aunque el script use `set -euo pipefail`, ¿por qué Bash no puede detenerlo por este aviso? Pista: `set -e` sólo actúa si el comando devuelve un código distinto de cero.
+4. ¿Cuál sería el cambio mínimo para corregir la ruta de entrada?
 
 ### Ejercicio 3 — Solicitud de memoria imposible
 
-El script `fastqc_overask.sbatch` pide `1T` de RAM. Antes de enviarlo, confirma con el `sinfo` inicial que ningún nodo tiene esa cantidad. Si existiera un nodo con 1 TB o más, cambia `--mem` por un valor superior al máximo observado.
+El script `fastqc_overask.sbatch` pide `2T` de RAM. En Portutatis, el nodo con más memoria tiene `2.031.000 MB` (aproximadamente 1,94 TiB), por lo que esta solicitud supera la capacidad de cualquier nodo. En una futura edición del curso, comprueba el máximo con `sinfo` y ajusta `--mem` si cambia el hardware.
 
 ```bash
 sbatch --chdir="$PWD" fastqc_overask.sbatch
-squeue --me
-scontrol show job <JOBID> | grep -E 'JobState|Reason|ReqTRES|MinMemoryNode|Partition'
 ```
 
-El trabajo debe permanecer en `PD`; no lo dejes en cola al acabar el ejercicio:
+Slurm rechaza la solicitud antes de crear el trabajo, con un mensaje similar a:
 
-```bash
-scancel <JOBID>
+```text
+sbatch: error: Memory specification can not be satisfied
+sbatch: error: Batch job submission failed: Requested node configuration is not available
 ```
 
-Pregunta: ¿qué valor de `Reason` muestra Slurm y qué recurso debes reducir para que el trabajo pueda empezar?
+No habrá `JOBID`, no aparecerá nada en `squeue` y no hay que usar `scancel`: el trabajo nunca ha entrado en la cola.
+
+Preguntas:
+
+1. ¿Qué recurso solicitado no puede satisfacer el clúster?
+2. ¿En qué momento detecta Slurm el problema: al enviar el trabajo o cuando ya está en cola?
+3. ¿Qué valor de `--mem` deberías solicitar como máximo para que al menos un nodo pueda aceptarlo?
 
 ## 3. Job arrays
 
@@ -168,7 +185,30 @@ Un *job array* envía muchas tareas con el mismo script. Cada tarea tiene el mis
 
 ### Ejercicio 1 — Dos muestras con índices consecutivos
 
-`array_demo.sbatch` procesa `virus1` y `virus2`; el rango `1-2` ya está definido en el propio script.
+Un *job array* no es un único trabajo que recorre muestras con un bucle. Al enviar un array, Slurm crea varias **tareas independientes** a partir del mismo script. Cada tarea puede empezar, esperar o terminar en un momento distinto, pero todas comparten la misma configuración de recursos.
+
+En este ejemplo, `array_demo.sbatch` procesa `virus1` y `virus2`. Antes de enviarlo, explora el script:
+
+```bash
+less array_demo.sbatch
+```
+
+Identifica estas líneas:
+
+| Línea del script | Qué significa |
+| --- | --- |
+| `#SBATCH --array=1-2` | Slurm creará dos tareas, con índices 1 y 2. |
+| `#SBATCH --cpus-per-task=1` y `--mem=2G` | Cada tarea pide sus propios 1 CPU y 2 GB; no se reparten entre las dos. |
+| `virus${SLURM_ARRAY_TASK_ID}_R1.fastq.gz` | En la tarea 1 la variable vale `1` y usa `virus1`; en la tarea 2 vale `2` y usa `virus2`. |
+| `demo_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}` | Cada tarea escribe en su propio directorio de resultados. |
+| `logs/%x-%A_%a.out` | Slurm genera un log por tarea: `%A` es el identificador base del array y `%a` es su índice. |
+
+Por tanto, una misma plantilla produce esta correspondencia:
+
+| Tarea | `SLURM_ARRAY_TASK_ID` | FASTQ procesados |
+| --- | --- | --- |
+| 1 | `1` | `virus1_R1.fastq.gz` y `virus1_R2.fastq.gz` |
+| 2 | `2` | `virus2_R1.fastq.gz` y `virus2_R2.fastq.gz` |
 
 ```bash
 sbatch --chdir="$PWD" array_demo.sbatch
@@ -176,6 +216,8 @@ squeue --me
 sacct -j <ARRAY_JOBID> -o JobID,JobName%20,State,Elapsed,MaxRSS,ExitCode
 find 02-array-demo-results -maxdepth 2 -type f -name '*.html'
 ```
+
+`sbatch` devolverá un único identificador base, por ejemplo `6500000`. En `squeue` y `sacct` verás las tareas como `6500000_1` y `6500000_2` (el formato exacto puede variar ligeramente). No asumas que la tarea 1 termina antes que la 2: Slurm las planifica de forma independiente.
 
 Preguntas:
 
@@ -235,8 +277,8 @@ Preguntas:
 El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. Crea el alineamiento de prueba en el directorio de la práctica (esta escritura pequeña no es un cálculo):
 
 ```bash
-mkdir -p data
-cat > data/datos.phy << 'EOF'
+srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:05:00 \
+  bash -c 'mkdir -p data && cat > data/datos.phy' << 'EOF'
 12 60
 Taxon_0001  ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT
 Taxon_0002  TGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCA
@@ -253,7 +295,7 @@ Taxon_0012  TTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAA
 EOF
 ```
 
-`raxml_mpi.sbatch` solicita dos nodos con cuatro tareas MPI en cada uno. Busca explícitamente un binario MPI (`raxmlHPC-MPI-AVX2`, `raxmlHPC-MPI-AVX` o `raxmlHPC-MPI`) y falla de forma clara si el módulo no proporciona ninguno; nunca sustituye silenciosamente ese binario por el serial `raxmlHPC`.
+`raxml_mpi.sbatch` solicita dos nodos con cuatro tareas MPI en cada uno. Busca explícitamente un binario MPI o híbrido (`raxmlHPC-MPI-*` o `raxmlHPC-HYBRID-*`) y falla de forma clara si el módulo no proporciona ninguno; nunca sustituye silenciosamente ese binario por el serial `raxmlHPC`. Para un binario híbrido, el script fija `-T 1`: ocho procesos MPI y un hilo por proceso. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
 
 ```bash
 sbatch --chdir="$PWD" raxml_mpi.sbatch

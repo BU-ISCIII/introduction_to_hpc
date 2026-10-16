@@ -351,7 +351,7 @@ With MPI, the key parameters are **`--nodes`** and **`--ntasks`**. Imagine using
 
 set -euo pipefail
 module load RAxML/8.2.12-gompi-2020a-hybrid-avx2
-srun raxmlHPC-MPI -s datos.phy -n resultado -m GTRGAMMA
+mpirun -np "$SLURM_NTASKS" raxmlHPC-MPI -s datos.phy -n resultado -m GTRGAMMA
 ```
 
 **Relevant MPI script parameters:**
