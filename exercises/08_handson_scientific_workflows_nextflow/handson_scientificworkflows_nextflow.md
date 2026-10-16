@@ -2,276 +2,184 @@
 
 BU-ISCIII
 
-## Práctica 10: Scientific Workflows with Nextflow (Slurm)
+## Práctica 8: flujos científicos reproducibles con Nextflow y Slurm
 
-Bienvenido a la sesión práctica sobre flujos de trabajo científicos con Nextflow en nuestro HPC. Verás por qué encadenar trabajos o tareas con `sbatch` es tedioso y sensible a errores humanos. Aprenderás como Nextflow es una potente herramienta para solventar estas limitaciones. Además, ejecutaremos un pipeline demo de Nextflow integrado en Slurm ([nf-core/demo](https://nf-co.re/demo/dev/)), y posteriormente, haremos frente a un caso de análisis real usando el pipeline [nf-core/bacass](https://nf-co.re/bacass/dev/).
+Nextflow describe un análisis como procesos conectados por sus datos de entrada y salida. En lugar de capturar manualmente varios `JOBID` y encadenarlos con `--dependency`, el *workflow manager* calcula dependencias, envía tareas a Slurm y permite reanudar una ejecución con `-resume`.
 
-- [Curso Práctico de Iniciación al uso del Entorno de Alta Computación](#curso-práctico-de-iniciación-al-uso-del-entorno-de-alta-computación)
-  - [Práctica 10: Scientific Workflows with Nextflow (Slurm)](#práctica-10-scientific-workflows-with-nextflow-slurm)
-  - [Descripción](#descripción)
-  - [A) El “antes”: encadenar tareas a mano con Slurm](#a-el-antes-encadenar-tareas-a-mano-con-slurm)
-  - [B) Nextflow con Slurm: **nf-demo**](#b-nextflow-con-slurm-nf-demo)
-  - [C) Caso real: **nf-core/bacass**](#c-caso-real-nf-corebacass)
-  - [D) Comparativa explícita: manual vs Nextflow (qué gana el alumno)](#d-comparativa-explícita-manual-vs-nextflow-qué-gana-el-alumno)
-  - [E) Errores frecuentes y cómo resolverlos (rápido)](#e-errores-frecuentes-y-cómo-resolverlos-rápido)
-  - [Checklist de lo que debes hacer/tocar](#checklist-de-lo-que-debes-hacertocar)
+> Conéctate mediante **MobaXterm (SSH)**. La práctica se ejecuta en el clúster: no se utiliza un subsistema Linux local.
 
-## Descripción
+En esta sesión se ejecutará un único caso, pequeño y reproducible: `nf-core/demo` **1.0.2**. Se ha fijado esa versión porque requiere Nextflow `>=24.04.2`, igual que el módulo indicado. No se incluye `nf-core/bacass`: se añadirá como una práctica independiente sólo después de disponer de datos, recursos y una prueba completa en Portutatis.
 
-Hasta ahora hemos visto **realizar** tareas en paralelo con Slurm para tareas puntuales. Sin embargo, esto no suele funcionar cuando quieres:
+## 1. Preparación
 
-* **Encadenar** varias etapas de un análisis (QC ➜ trimming ➜ mapeo ➜ reporte).
-* **Reintentar** fallos y **reanudar** donde lo dejaste.
-* Mantener de forma **organizada** resultados intermedios, logs y resultados finales.
+### 1.1 Rutas y comprobaciones
 
-La orquestación con varios `sbatch` + `--dependency` + manejo de logs se vuelve frágil y tediosa.
-
-**Nextflow** resuelve esto. Con Nextflow puedes crear y ejecutar **workflows** cuyos **procesos** (etapas o pasos del análisis) y **canales** (flujo de datos) están definidos, y la información fluye entre ellos. Entre otras particularidades, Nextflow se integra con **Slurm**, facilitando gestionar los trabajos y enviarlos al clúster por ti (capa de abstracción). Nextflow se encarga de gestionar absolutamente todo: instalar dependencias (conda, Docker, Singularity/Apptainer); ejecutar tareas; registrar los logs y resultados de forma estructurada; asegurar la reproducibilidad; y permitir **reintentar** fallos o **reanudar** etapas. En concreto, para lanzar en Slurm solo se necesita una **configuración mínima** por tu parte: eliges el *executor* (Slurm), la cola/recursos y, opcionalmente, contenedores (Singularity/Apptainer). Es particularmente útil porque un workflow que tengas con Nextflow en local (por ejemplo, en tu laptop) es compatible para ser usado en cualquier infraestructura computacional conocida; simplemente se necesita una pequeña configuración.
-
-Ejercicios que vamos a **realizar** en esta sesión:
-
-1. Ver el “antes” (lo complejo que sería encadenar **etapas** de un **análisis** con `sbatch`).
-2. Ejecutar **nf-demo** con Slurm.
-3. Probar un caso real con **nf-core/bacass**.
-
-### Flujo de trabajo con `/data` y `/scratch`
-
-Igual que en las prácticas anteriores, recuerda que **editamos y versionamos en `/data`** y **ejecutamos en `/scratch`**. En la [Práctica 04 — Access](https://github.com/BU-ISCIII/introduction_to_hpc/blob/5071c54f1533ee27f14c5d8f435ee963084927f2/exercises/04_access/handson_access.md#L516-L547) ya creaste tu carpeta `<fecha>_HPC-COURSE_${USER}` dentro de `/data/courses/hpc_course`. Comprueba que sigue presente y que contiene `ANALYSIS` y `RAW`:
-
-Pasos recomendados para organizar la práctica:
-
-1. **Edita** los archivos `nextflow.config` y `nextflow_demo.sbatch` en `/data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow`.
-2. **Sincroniza** esa carpeta a `/scratch` justo antes de lanzar Nextflow (y repite al finalizar para devolver resultados).
-3. **Ejecuta** siempre `sbatch` desde la ruta equivalente en `/scratch/hpc_course/...`.
-
-> Los esqueletos oficiales están en https://github.com/BU-ISCIII/introduction_to_hpc/tree/main/exercises/08_handson_scientific_workflows_nextflow. Copia sus contenidos y respeta los nombres de archivo.
-
-### Preparación inicial
-
-1. **Crea (si es necesario) la carpeta de trabajo en `/data`** y sitúate en ella:
-
-   ```bash
-   ls -l /data/courses/hpc_course/*HPC-COURSE_${USER}/{ANALYSIS,RAW}
-   cd /data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS
-   mkdir -p 08-scientific-workflows-nextflow/logs
-   cd 08-scientific-workflows-nextflow
-   ```
-
-2. **Descarga o crea los archivos** usando la versión RAW del repositorio (puedes sustituir `wget` por tu editor preferido):
-
-   ```bash
-   wget -O nextflow.config https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/refs/heads/main/exercises/08_handson_scientific_workflows_nextflow/nextflow.config
-   wget -O nextflow_demo.sbatch https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/refs/heads/main/exercises/08_handson_scientific_workflows_nextflow/nextflow_demo.sbatch
-   ```
-
-   Revisa ambos archivos y ajusta parámetros sólo si el docente lo indica.
-
-3. **Sincroniza con `/scratch`** antes de ejecutar Nextflow (lanza de nuevo este comando cada vez que edites algo en `/data`):
-
-   ```bash
-   srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
-     rsync -avh /data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow \
-             /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS
-   ```
-
-A partir de aquí trabaja desde `/scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow`.
-
----
-
-## A) El “antes”: encadenar tareas a mano con Slurm
-
-> *No lo ejecutes ahora; es para comparar mentalmente con Nextflow.*
-
-* **Paso 1** (array FastQC):
-
-  ```bash
-  sbatch fastqc_array.sbatch          # -> Submitted batch job 31001
-  ```
-* **Paso 2** (Fastp tras FastQC):
-
-  ```bash
-  sbatch --dependency=afterok:31001 fastp_array.sbatch
-  ```
-* **Paso 3** (Bowtie2 después de Fastp):
-
-  ```bash
-  sbatch --dependency=afterok:31002 bowtie2_array.sbatch
-  ```
-* **Problemas típicos**: capturar JOBID, reintentar solo una tarea, reanudar mitad del flujo, mezclar logs, etc.
-
-**Con Nextflow** no usas `--dependency`: declaras *procesos* y *canales* y **él decide el paralelismo**, dependencias, reintentos y *resume*.
-
----
-
-## B) Nextflow con Slurm: **nf-demo**
-
-### 1) Prepara carpeta y config mínima
-
-Con la carpeta `08-scientific-workflows-nextflow` ya creada en `/data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS`, permanece dentro de ella para generar la configuración de Nextflow:
+Define las rutas de esta edición del curso una vez por terminal:
 
 ```bash
-cd /data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow
+export COURSE_NAME="20261015_HPC-COURSE_${USER}"
+export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
+export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
+export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
+
+ls -ld "$DATA_DIR" "$ANALYSIS_DIR"
+module spider Nextflow
+module spider singularity
 ```
 
-Revisa el archivo `nextflow.config` (debería quedar así):
+La configuración y el script se editan en `/data`; tanto `work/` como la caché de Nextflow y las imágenes de Singularity se crean en `/scratch`. No ejecutes el workflow en el nodo de acceso.
+
+### 1.2 Crear y sincronizar la práctica
+
+```bash
+mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
+cd "$ANALYSIS_DIR/08-scientific-workflows-nextflow"
+
+BASE_URL='https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/main/exercises/08_handson_scientific_workflows_nextflow'
+wget -O nextflow.config "$BASE_URL/nextflow.config"
+wget -O nextflow_demo.sbatch "$BASE_URL/nextflow_demo.sbatch"
+
+srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
+  rsync -avh "$DATA_DIR/" "$SCRATCH_DIR/"
+
+cd "$SCRATCH_DIR/ANALYSIS/08-scientific-workflows-nextflow"
+pwd
+```
+
+## 2. Del encadenamiento manual al workflow
+
+Un análisis convencional con Slurm podría requerir capturar manualmente identificadores y declarar dependencias:
+
+```bash
+sbatch fastqc_array.sbatch                 # por ejemplo: 31001
+sbatch --dependency=afterok:31001 fastp_array.sbatch
+sbatch --dependency=afterok:31002 bowtie2_array.sbatch
+```
+
+Esto es aceptable para tres pasos sencillos, pero se vuelve frágil si una tarea falla, hay decenas de muestras o se quiere repetir sólo una parte. En Nextflow declaras los procesos y el flujo de datos. Su ejecutor Slurm crea los trabajos necesarios y mantiene una caché de las tareas completadas.
+
+## 3. Configuración mínima de Nextflow
+
+Abre `nextflow.config`:
+
+```bash
+less nextflow.config
+```
+
+Su contenido es:
 
 ```groovy
-// El gestor de paquetes que usaremos será Singularity:
 singularity {
   enabled    = true
   autoMounts = true
 }
 
 process {
-  executor      = 'slurm'      // Con este parámetro hacemos saber a Nextflow que ejecutará en Slurm
-  queue         = 'middle_idx'  // Indica el nombre de la cola
-  cpus          = 2            // CPUs por tarea
-  memory        = '6 GB'       // Memoria por tarea
-  time          = '1h'        // Límite por tarea
-  jobName       = { "${task.process} (${task.name})" }  // Nombre legible en la cola
+  executor      = 'slurm'
+  queue         = 'middle_idx'
+  cpus          = 2
+  memory        = '6 GB'
+  time          = '1h'
+  jobName       = { "${task.process} (${task.name})" }
   errorStrategy = { task.exitStatus in [140,143,137,138,104,134,139] ? 'retry' : 'finish' }
   maxRetries    = 1
   maxErrors     = -1
-  // Opcional: restringe nodos o añade flags del clúster
-  // clusterOptions = '--nodelist=ideafix[01-10]'
 }
 ```
 
-Ahora sincroniza la carpeta para que puedas disponer de ella en `/scratch`:
+Qué hay que observar:
+
+- `executor = 'slurm'` hace que las tareas del pipeline se envíen a Slurm, en vez de ejecutarse dentro del proceso controlador.
+- `queue`, `cpus`, `memory` y `time` son valores por defecto para cada proceso del workflow, no para el controlador.
+- `singularity.enabled` permite usar las dependencias encapsuladas por el pipeline sin instalar cada herramienta a mano.
+- `errorStrategy` sólo reintenta los códigos de salida enumerados; no convierte cualquier error lógico en un reintento infinito.
+
+## 4. Lanzar `nf-core/demo`
+
+Revisa el script antes de enviarlo. El proceso controlador pide recursos modestos; las tareas del pipeline reciben los que define `nextflow.config`.
 
 ```bash
-srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
-  rsync -avh /data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow \
-            /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/
+less nextflow_demo.sbatch
+sbatch --chdir="$PWD" nextflow_demo.sbatch
 ```
 
-Por último dirígete a la carpeta de esta práctica en `/scratch`:
+El script carga los módulos, fija la versión del pipeline y guarda todos los ficheros temporales dentro del directorio actual:
 
 ```bash
-cd /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow/
-```
-
-### 2) Script SBATCH para ejecutar Nextflow en el sistema de colas de SLURM
-
-Comprueba que el script `nextflow_demo.sbatch` que has guardado en `/data` contiene lo siguiente (es el "master" que controlará Nextflow en Slurm):
-
-```bash
-#!/bin/bash
-#SBATCH --job-name=nf_demo
-#SBATCH --partition=middle_idx
-#SBATCH --time=12:00:00
-#SBATCH --cpus-per-task=2                 # Recursos SOLO para el controlador de Nextflow
-#SBATCH --mem=2G
-#SBATCH --output=logs/%x-%j.out
-#SBATCH --error=logs/%x-%j.err
-
-# Carga las dependencias para ejecutar Nextflow
 module purge
 module load Nextflow/24.04.2
 module load singularity/3.7.1
 
-mkdir -p 01-nextflow-demo-results
-# Ejecuta nf-core/demo (workflow preparado)
-# Importante: le indicamos que lea el archivo de configuración
-nextflow run nf-core/demo \
+export NXF_HOME="$PWD/.nextflow"
+export NXF_SINGULARITY_CACHEDIR="$PWD/.singularity"
+
+nextflow run nf-core/demo -r 1.0.2 \
   -profile test,singularity \
   -c nextflow.config \
+  -work-dir "$PWD/work" \
   --outdir 01-nextflow-demo-results \
+  -with-trace trace.txt \
+  -with-report report.html \
+  -with-timeline timeline.html \
   -resume
 ```
 
-> Nota: Entre sus capas de abstracción, Nextflow tiene la propiedad de descargarse **workflows** listos (datos de prueba, perfiles de testing, etc.) desde repositorios como GitHub. En este caso, antes de lanzar `nf-core/demo`, si no existe en el clúster, lo descargará y luego lo ejecutará.
+> En la primera ejecución Nextflow puede tener que descargar el pipeline y Singularity una o varias imágenes. Esto requiere conectividad saliente desde los nodos de cálculo. El docente debe probar este primer arranque antes de la clase; si el centro no permite esas descargas, hay que precargar el pipeline y las imágenes en una caché compartida.
 
-Ejecutemos el script de `sbatch`. (Si es posible, antes de lanzar el trabajo, abre otra terminal ejecuta: `watch squeue --me`)
+## 5. Seguimiento y resultados
 
-```bash
-sbatch --chdir=/scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow nextflow_demo.sbatch
-```
-
-**Monitoreo**
-
-Ahora es el momento de monitorizar las tareas. En Nextflow tenemos que visualizar los siguientes puntos para el monitoreo:
-
-* El *standard output* se guardará en el archivo que hayamos definido en `--output` (en este ejemplo: `%x-%j.out`). Ejemplo de un *standard output* de Nextflow.:
+En otra terminal de MobaXterm puedes observar tanto el controlador como las tareas que crea:
 
 ```bash
-more /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow/logs/nf_demo-<JOBID>.out
+watch -n 2 'squeue --me'
 ```
+
+Cuando el trabajo finalice, revisa primero el estado de Slurm y el log del controlador:
 
 ```bash
-N E X T F L O W  ~  version 24.02.0
-Launching `main.nf` [elegant_burnell] DSL2 - revision: a1b2c3d4f5
-executor >  slurm (6)
-[3a/5f1c2b] process > DOWNLOAD_TEST_DATA           [100%] 1 of 1 ✔
-[b9/904773] process > FASTQC (sample_1)            [100%] 1 of 1 ✔
-[6e/12ab34] process > FASTQC (sample_2)            [100%] 1 of 1 ✔
-[2d/aa77cc] process > ECHO_HELLO (1)               [100%] 4 of 4 ✔
-[7f/33dd44] process > MULTIQC                       [100%] 1 of 1 ✔
-
-Completed at: 2025-09-01 11:42:17
-Duration    : 2m 12s
-CPU hours   : 0.1
-Succeeded   : 8
+sacct -j <JOBID> -o JobID,JobName,State,Elapsed,MaxRSS,AllocCPUS,ExitCode
+less "logs/nf_demo-<JOBID>.out"
+less "logs/nf_demo-<JOBID>.err"
+tail -n 50 .nextflow.log
 ```
 
-* Comando `watch squeue --me` para ver las tareas que van entrando al sistema de colas del HPC.
-
-* Por último tendrás que explorar los resultados en `/scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow/`. Verás la carpeta `01-nextflow-demo-results/` (resultados finales del workflow) y `work/` (estructura interna de Nextflow con datos intermedios y salidas cacheadas).
-
-
-**PREGUNTAS:**
-
-* ¿Cuántas tareas se lanzaron y con qué **jobName** aparecen en `squeue`?
-* Explora detenidamente la carpeta `01-nextflow-demo-results/pipeline_info/` generada por el workflow. 
-* Lanza **otra vez** el comando anterior añadiendo `-resume`: ¿re-ejecuta todo?
-
-### Sincronización final
-
-Cuando termines la práctica, devuelve los resultados a `/data`:
+Después explora los productos del workflow:
 
 ```bash
-rsync -avh /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow/ \
-          /data/courses/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/08-scientific-workflows-nextflow/
+find 01-nextflow-demo-results -maxdepth 3 -type f | sort
+ls -lh trace.txt report.html timeline.html
 ```
 
+- `01-nextflow-demo-results/` contiene los resultados publicados por el pipeline.
+- `work/` es la caché de tareas; no la edites a mano.
+- `trace.txt` relaciona procesos, recursos y estado.
+- `report.html` y `timeline.html` permiten revisar gráficamente la ejecución.
 
-## D) Comparativa explícita: manual vs Nextflow (qué gana el alumno)
+Preguntas:
 
-| Aspecto                       | Cadena `sbatch` manual          | Nextflow                                                     |
-| ----------------------------- | ------------------------------- | ------------------------------------------------------------ |
-| Dependencias                  | `--dependency` a mano           | Implícitas por el grafo (canales)                            |
-| Paralelismo                   | Lo gestionas tú (arrays/bucles) | Lo calcula por inputs; el *executor* reparte en Slurm        |
-| Reintentos y *resume*         | A mano, frágil                  | `errorStrategy`, `maxRetries`, `-resume` automático          |
-| Trazas y reportes             | `sacct`/logs por tu cuenta      | `-with-trace`, `-with-report`, `-with-timeline`, `-with-dag` |
-| Portabilidad de software      | Módulos/conda que montas tú     | Perfiles `singularity`/`conda` en `nextflow.config`          |
-| Re-ejecutar sólo lo pendiente | Difícil                         | Hashing de tareas + caché                                    |
+1. ¿Cuántas tareas lanza el pipeline y qué nombres aparecen en `squeue`?
+2. ¿Qué diferencia hay entre el `JOBID` del controlador `nf_demo` y los trabajos creados por el ejecutor Slurm?
+3. Busca una tarea completada en `trace.txt`: ¿qué CPU, memoria y tiempo solicitó?
+4. Ejecuta de nuevo el mismo script. ¿Qué tareas muestra Nextflow como `cached` y por qué?
 
----
+## 6. Errores frecuentes
 
-## E) Errores frecuentes y cómo resolverlos (rápido)
+| Síntoma | Primera comprobación |
+| --- | --- |
+| El controlador falla antes de crear tareas | `logs/nf_demo-<JOBID>.err`, `module spider Nextflow`, `nextflow -version`. |
+| Una tarea queda pendiente | `squeue --me` y `scontrol show job <JOBID>` para ver `Reason` y recursos solicitados. |
+| Falla al descargar el pipeline o una imagen | Revisa conectividad desde nodo de cálculo y la política de caché del centro. |
+| `-resume` no reutiliza tareas | Confirma que se conserva `work/`, que se usa el mismo directorio y que no se cambiaron inputs, parámetros o versión del pipeline. |
+| Faltan resultados | Revisa `.nextflow.log`, el directorio `work/` de la tarea y `trace.txt`; no te limites al log del controlador. |
 
-* **No hay contenedor** / Singularity no instalado
-  ➜ Desactiva singularity y usa `conda.enabled = true` o módulos de tu HPC.
+## 7. Cierre
 
-* **Cola/nodo incorrecto**
-  ➜ Ajusta `process.queue`, `clusterOptions` o `withName:` en `nextflow.config`.
+Devuelve a `/data` los resultados que deben conservarse. Para ahorrar espacio, no copies `work/`, `.nextflow/` ni `.singularity/` salvo que el docente indique lo contrario:
 
-* **No encuentra archivos de entrada**
-  ➜ Revisa rutas del *samplesheet* y permisos. Si el canal queda vacío, Nextflow no lanza tareas.
-
-* **Quiero ver qué está lanzando exactamente**
-  ➜ `tail -f .nextflow.log` y `squeue --me`.
-
----
-
-## Checklist de lo que debes hacer/tocar
-
-1. Crear `nextflow.config` (executor=slurm, perfil singularity, recursos por defecto).
-3. Crear `samplesheet.csv` y ejecutar **nf-core/bacass**.
-4. Repetir con `-resume` y **ver qué se salta**.
-5. Ajustar recursos con `withName:` y **confirmar** en `squeue/trace`.
-
-**Preguntas:**
-
-* ¿Qué parte te resultó más “mágica”: **no usar `sbatch`** o **reanudar** con `-resume`?
-* ¿Dónde mirarías primero si algo falla?
+```bash
+srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
+  rsync -avh \
+    --exclude='work/' --exclude='.nextflow/' --exclude='.singularity/' \
+    "$SCRATCH_DIR/ANALYSIS/08-scientific-workflows-nextflow/" \
+    "$DATA_DIR/ANALYSIS/08-scientific-workflows-nextflow/"
+```

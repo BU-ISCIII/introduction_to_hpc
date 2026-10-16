@@ -9,14 +9,25 @@
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
+set -euo pipefail
+
 module load RAxML/8.2.12-gompi-2020a-hybrid-avx2  # el módulo puede traer varios binarios
 
 RUNNAME="ML_bootstrap"
 mkdir -p 05-raxml_mpi-results
-RESULTS_DIR="/scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/07-scripting-and-parallelization/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
+RESULTS_DIR="$PWD/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
 mkdir -p "$RESULTS_DIR"
 
-mpirun -np "$SLURM_NTASKS" raxmlHPC \
+RAXML_BIN=""
+for candidate in raxmlHPC-MPI-AVX2 raxmlHPC-MPI-AVX raxmlHPC-MPI; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    RAXML_BIN="$candidate"
+    break
+  fi
+done
+[[ -n "$RAXML_BIN" ]] || { echo "[ERROR] No MPI-enabled RAxML executable found." >&2; exit 127; }
+
+srun "$RAXML_BIN" \
   -s data/datos.phy \
   -m GTRGAMMA \
   -p 12345 \

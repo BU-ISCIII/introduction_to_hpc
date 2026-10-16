@@ -7,6 +7,8 @@
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
+set -euo pipefail
+
 # Carga dependencias
 module load FastQC/0.11.9-Java-11
 
@@ -19,8 +21,8 @@ mkdir -p 01-fastqc-demo-results
 
 # Ejecuta fastqc
 fastqc \
-  /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/00-reads/virus1_R1.fastq.gz \
-  /scratch/hpc_course/*HPC-COURSE_${USER}/ANALYSIS/00-reads/virus1_R2.fastq.gz \
+  ../00-reads/virus1_R1.fastq.gz \
+  ../00-reads/virus1_R2.fastq.gz \
   -o 01-fastqc-demo-results
 
 echo "[INFO] Finished at $(date)"
