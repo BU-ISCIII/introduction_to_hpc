@@ -2,7 +2,7 @@
 #SBATCH --job-name=fastqc_overask
 #SBATCH --partition=short_idx
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=1T                         # Debe superar la RAM de cualquier nodo
+#SBATCH --mem=2T                         # Supera los 2.031.000 MB del nodo más grande
 #SBATCH --time=00:05:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
