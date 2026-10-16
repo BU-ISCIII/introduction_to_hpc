@@ -1,5 +1,7 @@
 # Talk 6: Scripting and parallelization
 
+> Course connection: use **MobaXterm over SSH** to work on the cluster. Commands and scripts in this talk run on the remote HPC; no local Linux subsystem is used.
+
 ## Scripting
 
 The main idea of this part of the course is learning to **delegate work** to the cluster. Instead of running every command by hand, we prepare a small script that the job scheduler (Slurm) reads and runs for us. This way we can log off and let the computers do the work without direct supervision. Also, working like this is safer for the system: admins recommend not running heavy tasks on the **login node** (frontend), but sending them to the compute nodes through Slurm. Slurm will assign the job to an available node, control how it runs, and avoid resource conflicts, ensuring fair and efficient use of the cluster.
@@ -11,7 +13,7 @@ The main idea of this part of the course is learning to **delegate work** to the
 * `sbatch` is a command you can run in the terminal to send an order to **Slurm**.
 * More specifically, it’s the **Slurm** command to submit a job *script* to the cluster queue. It’s like dropping a parcel at the post office so they deliver it when they can: you hand in the parcel (your script) at the Slurm “office”, and the cluster runs it when resources are available.
 * In bioinformatics and other areas, it’s useful to launch repetitive analyses (e.g., quality control with `FastQC`, alignments, assemblies, etc.) over many sequencing files without doing them interactively one by one.
-* It lets you send jobs to run in the **background** (for example, in the `short_idx` queue on nodes `ideafix[01-10]`), freeing your personal computer for other tasks. In other words, you use the cluster’s power instead of overloading your PC.
+* It lets you send jobs to run in the **background** (for example, in the `short_idx` queue), freeing your personal computer for other tasks. In other words, you use the cluster’s power instead of overloading your PC.
 
 #### What is it for?
 
@@ -54,6 +56,7 @@ A typical header could be:
 #SBATCH --partition=short_idx                # Queue/partition to run in
 #SBATCH --output=slurm-%j.out                # File for standard output
 #SBATCH --error=slurm-%j.err                 # File for standard error
+set -euo pipefail                            # Stop if a command or variable fails
 # From here on, the commands we want to run:
 command_1
 command_2
@@ -87,7 +90,8 @@ As we saw in the course, compute nodes often use **environment modules** to mana
 #SBATCH --partition=short_idx
 #SBATCH --output=slurm-%j.out
 #SBATCH --error=slurm-%j.err
-module load fastqc/0.12.1    # Load FastQC module version 0.12.1
+set -euo pipefail
+module load FastQC/0.11.9-Java-11
 fastqc datos.fq.gz           # Run the actual command on our file
 ```
 
@@ -177,10 +181,11 @@ nano fastqc_array_20.sbatch
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=5G
 #SBATCH --time=00:15:00
-#SBATCH --output=fastqc_%A_%a.out # %A: array JobID, %a: task index
+  #SBATCH --output=fastqc_%A_%a.out # %A: array JobID, %a: task index
 #SBATCH --error=fastqc_%A_%a.err
 
-module load fastqc/0.12.1
+set -euo pipefail
+module load FastQC/0.11.9-Java-11
 
 mkdir fastqc_results
 fastqc -o fastqc_results muestra_${SLURM_ARRAY_TASK_ID}.fq.gz
@@ -212,7 +217,8 @@ Inside the script, it’s also common to customize log filenames to include the 
 #SBATCH --output=fastqc_%A_%a.out  # %A = JobID del array, %a = índice de tarea
 #SBATCH --error=fastqc_%A_%a.err
 
-module load fastqc/0.12.1
+set -euo pipefail
+module load FastQC/0.11.9-Java-11
 
 mkdir -p fastqc_results
 fastqc -o fastqc_results muestra_${SLURM_ARRAY_TASK_ID}.fq.gz
@@ -260,7 +266,7 @@ On the other hand, **MPI** is less common, with exceptions mainly in **phylogene
 * IQ-TREE MPI
 * Some molecular modeling or dynamics packages
 
-[TODO]: <Add image of partition — node — CPUs>
+> Mental model: a **partition** contains nodes; a node contains CPUs and RAM. OpenMP uses several CPUs of one node, while MPI can distribute processes across nodes.
 
 The **key difference** is **where and how tasks are split**:
 
@@ -278,11 +284,7 @@ The **key difference** is **where and how tasks are split**:
 | **Cons**             | - Only works within a single node.<br>- If the node has few cores, you can’t speed up more.          | - More complex to configure.<br>- More sensitive to network/node issues.<br>- Few bioinformatics tools use it.    |
 | **Bioinfo examples** | Aligners (BWA, Bowtie2, STAR), assemblers (SPAdes, MEGAHIT), variant callers (GATK).                 | Phylogeny with RAxML or IQ-TREE, molecular simulations.                                                           |
 
-> As noted by professionals on LinkedIn (F. Quartin de Macedo, M. Saad), OpenMP stands out for simplicity in shared memory, while MPI is valued for scalability on distributed systems. [Article here](https://www.linkedin.com/advice/0/what-pros-cons-using-openmp-vs-mpi-shared?lang=es&lang=es&originalSubdomain=es).
-
 ---
-
-[TODO]: <Still need to be tested>
 
 ### Setting up an OpenMP job in Slurm
 
@@ -292,19 +294,20 @@ Let’s say we want to run a bioinformatics program that supports OpenMP (for ex
 #!/bin/bash
 #SBATCH --job-name=spades_openmp
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --time=12:00:00
-#SBATCH --partition=long
+#SBATCH --mem=32G
+#SBATCH --time=02:00:00
+#SBATCH --partition=short_idx
 #SBATCH --output=spades_%j.out
 #SBATCH --error=spades_%j.err
 
-module load spades/3.15.5
+set -euo pipefail
+module load SPAdes/3.15.2-GCC-10.2.0
 
 R1="sample_R1.fq.gz"
 R2="sample_R2.fq.gz"
 spades.py \
   --threads "${SLURM_CPUS_PER_TASK}" \
-  -m 64 \
+  -m "${SLURM_MEM_PER_NODE}" \
   -1 "${R1}" -2 "${R2}" \
   -o ensamblado_resultado
 ```
@@ -330,8 +333,6 @@ sbatch spades_slurm.sbatch
 
 ---
 
-[TODO]: <Still need to be tested>
-
 ### Setting up an MPI job in Slurm
 
 With MPI, the key parameters are **`--nodes`** and **`--ntasks`**. Imagine using an MPI-enabled tool—e.g., **RAxML** for a large phylogenetic analysis. We want 2 nodes with 4 MPI processes on each (8 processes in total). The SBATCH script would be:
@@ -343,13 +344,14 @@ With MPI, the key parameters are **`--nodes`** and **`--ntasks`**. Imagine using
 #SBATCH --ntasks=8
 #SBATCH --ntasks-per-node=4
 #SBATCH --mem=8G
-#SBATCH --time=06:00:00
-#SBATCH --partition=long
+#SBATCH --time=00:30:00
+#SBATCH --partition=short_idx
 #SBATCH --output=raxml_%j.out
 #SBATCH --error=raxml_%j.err
 
-module load raxml/8.2.12
-mpirun -np $SLURM_NTASKS raxmlHPC-MPI -s datos.phy -n resultado -m GTRGAMMA
+set -euo pipefail
+module load RAxML/8.2.12-gompi-2020a-hybrid-avx2
+srun raxmlHPC-MPI -s datos.phy -n resultado -m GTRGAMMA
 ```
 
 **Relevant MPI script parameters:**

@@ -7,6 +7,8 @@
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
+set -euo pipefail
+
 module load SPAdes/3.15.2-GCC-10.2.0
 
 mkdir -p 04-openmp-spades-results
@@ -16,4 +18,4 @@ R2=../00-reads/ERR2261314_R2.fastq.gz
 
 spades.py -1 "$R1" -2 "$R2" -o 04-openmp-spades-results/spades_sample01 \
     --threads "$SLURM_CPUS_PER_TASK" \
-    --mem $SLURM_MEM_PER_NODE
+    --mem "$SLURM_MEM_PER_NODE"
