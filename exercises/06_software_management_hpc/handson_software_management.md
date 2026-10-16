@@ -27,82 +27,14 @@ Bienvenido a la sesión práctica sobre la gestión de software en nuestro HPC. 
   - `/local_scratch` → espacio temporal en cada nodo, se elimina al terminar el trabajo.
 - No almacenar información no relacionada con los cálculos autorizados.
 
-## 1. Permisos: PC personal vs HPC
-
-- En este apartado vamos a **Comparar permisos de archivos y software** entre tu PC personal y el HPC y cómo gestionarlos.
-- **Práctica: comprobar permisos de usuario y grupo**
-
-  - Comprobar tus permisos de usuario en tu ordenador personal:
-
-  ```bash
-  whoami # Mostrar mi nombre de usuario
-  groups # Mostrar los grupos a los que pertenece mi usuario
-  ls -l ~ # Listar contenido del directorio home (~), incluyendo permisos
-  ```
-
-  - Ahora repite el mismo comando pero en el HPC, ¿ves alguna diferencia? ¿Por qué?
-
-- **Práctica con `chown` (cambiar propietario del archivo):**
-
-  - En tu ordenador personal (si tienes acceso admin/root), crea un archivo y cambia su propietario:
-
-  ```bash
-  touch testfile.txt # Crear archivo
-  ls -l testfile.txt
-  rm testfile.txt
-  ```
-
-  - El archivo se ha borrado sin problema. Pero ¿qué pasa si solo puede borrarlo root?
-
-  - Primero, iniciemos una sesión root en nuestro ordenador personal:
-
-  ```bash
-  sudo su
-  touch testfile.txt
-  exit # Salir de la sesión root
-  ```
-
-  - Ahora que salimos de root, revisemos los permisos de testfile.txt.
-
-  ```bash
-  ls -l testfile.txt
-  ```
-
-  - Intenta editar o borrar el archivo como usuario normal:
-
-  ```bash
-  rm testfile.txt
-  ```
-
-  - **En el HPC**, intenta ejecutar `chown` en un archivo de tu directorio home:
-
-  ```bash
-  # vamos a nuestro home
-  cd
-  pwd
-  ls
-  touch myfile.txt
-  ls -l myfile.txt # Veremos que los permisos son unicamente de nuestro usuario
-  chown root:root myfile.txt
-  ```
-
-  - **Output:** Aparecerá `"Operation not permitted"`, porque no tienes privilegios root en el HPC.
-
-  - Ahora intenta cambiar la propiedad a un grupo común del laboratorio: `chown alumnoXX:hpccourse myfile.txt`. Podremos ver con `ls -l` que en ese caso sí que funciona porque pertenecemos a ese grupo y el propietario sigue siendo el mismo.
-
-  - **Discusión:**
-
-    - ¿Por qué `chown` está restringido en sistemas compartidos?
-    - ¿Cómo afecta esto a la instalación de software y gestión de archivos en HPC?
-
-## 2. Entornos Virtuales & Gestores de Software
+## 1. Entornos Virtuales & Gestores de Software
 
 - **¿Por qué usar entornos virtuales?**
   Principalmente para aislar dependencias y evitar conflictos, pero también sirve para organizar todo el software necesario para una tarea en el mismo lugar.
 
 - **¿Cómo crear un entorno virtual?**
   Existen muchas herramientas que ayudan a crear entornos virtuales. Softwares como **conda o mamba** incluso los gestionan para simplificar la instalación de software y evitar conflictos.
-  
+
 - En primer lugar, sino estamos ya conectados, vamos a conectarnos al HPC por ssh como hemos visto anteriormente: `ssh -p 32122 usuario@portutatis.isciii.es`
 
   - Una manera sencilla de crear un entorno virtual es con `venv`, una herramienta propia de Python:
@@ -121,22 +53,23 @@ Bienvenido a la sesión práctica sobre la gestión de software en nuestro HPC. 
     pip install --upgrade pip # Upgrade pip version, default is too old
     pip install numpy rich requests # Instalar paquetes con pip
     python3 -c 'import numpy as np; print(np.random.rand(10))' # Comprobar instalación
-    "Output (Numeros aleatorios)
-    [0.82817341 0.32560646 0.96031543 0.49938711 0.28076754 0.5633077
-    0.62029871 0.13840926 0.12178352 0.74080816]
-    "
+
+    # Output (Numeros aleatorios)
+    # [0.82817341 0.32560646 0.96031543 0.49938711 0.28076754 0.5633077
+    # 0.62029871 0.13840926 0.12178352 0.74080816]
     ```
 
     - Vamos a ver que pasa si lo desinstalamos:
 
     ```bash
-    pip uninstall -y numpy # -y Evita que nos pregunte si estamos seguros 
+    pip uninstall -y numpy # -y Evita que nos pregunte si estamos seguros
     python3 -c 'import numpy' # Esperado -> ModuleNotFoundError
-    "Output
-    Traceback (most recent call last):
-    File "<string>", line 1, in <module>
-    ModuleNotFoundError: No module named 'numpy'
-    "
+
+    # Output
+    # Traceback (most recent call last):
+    # File "<string>", line 1, in <module>
+    # ModuleNotFoundError: No module named 'numpy'
+
     deactivate # Salir del entorno virtual
     ```
 
@@ -213,7 +146,7 @@ micromamba
 - Output:
 
 ```bash
-Version: 2.3.2 
+Version: 2.3.2
 
 
 
@@ -231,7 +164,7 @@ Configuration options:
           --no-env            Disable the use of environment variables
 
 Global options:
-  -v,     --verbose           Set verbosity (higher verbosity with multiple -v, e.g. -vvv)       
+  -v,     --verbose           Set verbosity (higher verbosity with multiple -v, e.g. -vvv)
           --log-level ENUM:value in {critical->5,debug->1,error->4,info->2,off->6,trace->0,warning->3} OR {5,1,4,2,6,0,3}
                               Set the log level
   -q,     --quiet             Set quiet mode (print less output)
@@ -242,7 +175,7 @@ Global options:
           --download-only     Only download and extract packages, do not link them into
                               environment.
           --experimental      Enable experimental features
-          --use-uv            Whether to use uv for installing pip dependencies. Defaults to     
+          --use-uv            Whether to use uv for installing pip dependencies. Defaults to
                               false.
 
 Prefix options:
@@ -258,7 +191,7 @@ SUBCOMMANDS:
   install                     Install packages in active environment
   update                      Update packages in active environment
   self-update                 Update micromamba
-  repoquery                   Find and analyze packages in active environment or channels        
+  repoquery                   Find and analyze packages in active environment or channels
   remove, uninstall           Remove packages from active environment
   list                        List packages in active environment
   package                     Extract a package or bundle files into an archive
@@ -328,22 +261,22 @@ channel_priority: strict
 ```bash
 micromamba create -y -n mamba_env python==3.12.0 pip twine -c conda-forge
 ```
-  
+
 - Output:
 
 ```bash
   #
   # Transaction finished
-  # 
+  #
   # To activate this environment, use:
-  # 
+  #
   #     micromamba activate mamba_env
-  # 
+  #
   # Or to execute a single command in this environment, use:
-  # 
+  #
   #    micromamba run -n mamba_env mycommand
 ```
-  
+
 - Vamos a explicar cada parámetro en profundidad:
 
   - `-y` sirve para no tener que confirmar la instalación
@@ -352,26 +285,26 @@ micromamba create -y -n mamba_env python==3.12.0 pip twine -c conda-forge
   - `-c` indica el **channel o canal** donde va a buscar los paquetes.
 
   **Podemos establecer tantos paquetes iniciales como queramos**, siempre que estén disponibles en los canales de conda configurados.
-  
+
   - Activemos nuestro entorno virtual:
-  
+
   ```bash
   micromamba activate mamba_env
   ```
-  
+
   - Tus paquetes ahora están aislados del   sistema global. Verás `(mamba_env)` añadido en la esquina   izquierda del prompt de tu terminal como indicador de que   el entorno está activado.
-  
+
   - Puedes probar `pip list`   ahora, ya que estará disponible dentro del entorno   virtual. Esto listará todos los paquetes instalados con   pip. Intenta hacer lo mismo en el anterior virtualenv   `mamba_env` para ver qué ocurre (_pista: primero necesitarás   salir con `micromamba deactivate`_).
-  
+
   - Veamos si `seqkit` está disponible en pip o micromamba para poder instalarlo:
   Pip no tiene un comando oficial para buscar un paquete, debes ir a su página web y usar el navegador para encontrarlo [https://pypi.org/search](<https://pypi.org/>  search). Es crucial inspeccionarlo antes de instalar, ya que podría haber un paquete con el mismo nombre que el que quieres pero con diferente funcionalidad.
-  
+
   **Ejemplo**: `taranis` en pip es un wrapper de una API meteorológica, pero en bioconda es un pipeline para wg/cgMLST allele calling.
-  
+
   - En este caso, `Seqkit` no está disponible a través de pip, por lo que nuestra mejor opción es instalarlo con micromamba.
-  
+
   - Veamos si `seqkit` está disponible en micromamba:
-  
+
   ```bash
   micromamba search seqkit
   # Getting repodata from channels...
@@ -383,17 +316,17 @@ micromamba create -y -n mamba_env python==3.12.0 pip twine -c conda-forge
   # No entries matching "seqkit" found
   # Try looking in a different channel with '-c, --channel'.
   ```
-  
+
   Como puedes ver no aparece. Esto es debido a que seqkit solo se encuentra disponible en [https://conda.anaconda.org/bioconda](https://conda.anaconda.org/bioconda). Esto significa que si no tenemos el canal `bioconda` añadido a nuestra configuración, no podremos descargarlo con micromamba.
-  
+
   - Puedes comprobar la lista de canales accesibles con:
-  
+
   ```bash
   micromamba config get channels
   ```
-  
+
   Podrías ver algo como lo siguiente:
-  
+
   ```bash
   channels:
       - conda-forge
@@ -404,11 +337,11 @@ micromamba create -y -n mamba_env python==3.12.0 pip twine -c conda-forge
   ```bash
   micromamba install seqkit -c bioconda
   ```
-  
+
   - Si quieres **añadir un canal por defecto**, puedes hacerlo modificando la sección `channels` en el archivo de configuración `~/.condarc`. El orden de los canales es importante para evitar conflictos, la configuración actual que recomienda bioconda es esta, pero puede cambiar con el tiempo:
 
   > Nota primer canal con más prioridad que el segundo
-  
+
   ```bash
   channels:
       - conda-forge
@@ -417,16 +350,6 @@ micromamba create -y -n mamba_env python==3.12.0 pip twine -c conda-forge
 
   Ahora ya no tendrás que indicar bioconda como canal al instalar ya que lo usará por defecto.
 
-  Como práctica, vamos a **eliminar el canal bioconda** e intentar reinstalar `seqkit`:
-  
-  1. Elimina `- bioconda` de la sección `channels` en `~/.  condarc`
-  2. Ejecuta `micromamba remove seqkit` para desinstalarlo
-  3. Reinstala `seqkit` con micromamba
-  
-  Bueno bueno, ahora parece que `seqkit` ya no está   disponible.
-  
-  Para continuar con la siguiente sección, **vuelve a añadir   el canal bioconda** e **instala seqkit otra vez** por tu   cuenta.
-  
   - **Consejo**: si quieres instalar paquetes de   Python, usa `pip install` ya que es el repositorio de   paquetes de Python más grande, pero para herramientas más   complejas como `bedtools` o ``fastp utiliza **micromamba** o   **conda**.
 
   - Ahora que ya tenemos instalado `seqkit`, vamos a hacer una pequeña prueba para ver que funciona:
@@ -434,19 +357,18 @@ micromamba create -y -n mamba_env python==3.12.0 pip twine -c conda-forge
   ```bash
   micromamba activate mamba_env
   seqkit version
-  "Output
-  seqkit v2.10.1
-  "
+  #Output
+  #seqkit v2.10.1
   ```
 
   ```bash
   # zcat permite leer archivos comprimidos
   srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:02:00 zcat /data/courses/hpc_course/*HPC-COURSE_${USER}/RAW/virus1_R1.fastq.gz | seqkit stats
-  "Output
-  
-  file  format  type  num_seqs     sum_len  min_len  avg_len  max_len
-  -     FASTQ   DNA    142,672  15,874,146       35    111.3      151
-  "
+
+  #Output
+  #file  format  type  num_seqs     sum_len  min_len  avg_len  max_len
+  #-     FASTQ   DNA    142,672  15,874,146       35    111.3      151
+  #
   micromamba deactivate
   ```
 
@@ -500,8 +422,8 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
-> Aquí podréis lanzar comandos de R 
-ctrl+D para salir y pulsar "n" (no guardar) 
+> Aquí podréis lanzar comandos de R
+ctrl+D para salir y pulsar "n" (no guardar)
 "
 ```
 
@@ -681,9 +603,9 @@ El comando `singularity run` ya descarga la imagen antes de ejecutarla, lo cual 
 `singularity run` iniciará una sesión en el container y ejecutará la acción por defecto programada en él si la hubiere.
 
 ```bash
-singularity run https://depot.galaxyproject.org/singularity/fastp%3A1.0.1--heae3180_0 
+singularity run https://depot.galaxyproject.org/singularity/fastp%3A1.0.1--heae3180_0
 # Ahora estaremos dentro del container, ya que esta imagen no tiene proceso de inicio.
-# Podemos probar a lanzar fastp para ver que está disponible en el container 
+# Podemos probar a lanzar fastp para ver que está disponible en el container
 fastp --help
 exit # Salir del container. También con ctrl+D
 ```
@@ -711,7 +633,7 @@ srun --partition=short_idx --cpus-per-task=1 --mem=2G --time=00:05:00 singularit
 ./singularity_images/fastp.img fastp -i ../00-reads/virus1_R1.fastq.gz -I ../00-reads/virus1_R2.fastq.gz -o trimmed_virus1_R1.fastq.gz -O trimmed_virus1_R2.fastq.gz
 ```
 
-Al hacer `--bind <PATH>`, lo que pongamos en `<PATH>` será accesible dentro del contenedor. Por ejemplo en este caso `/scratch/hpc_course/<CARPETA_HPC_COURSE>` será accesible en el contenedor. 
+Al hacer `--bind <PATH>`, lo que pongamos en `<PATH>` será accesible dentro del contenedor. Por ejemplo en este caso `/scratch/hpc_course/<CARPETA_HPC_COURSE>` será accesible en el contenedor.
 
 ### 3.2 Otros conceptos importantes sobre singularity
 
