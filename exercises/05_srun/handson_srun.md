@@ -106,7 +106,7 @@ srun: error: ideafix03: task 0: Out Of Memory
 - Revisemos la información del job con `sacct`
 
 ```bash
-sacct -j SLURM_JOB_ID --format=JobID,State,MaxRSS,ReqMem 
+sacct -j SLURM_JOB_ID --format=JobID,State,MaxRSS,ReqMem
 # Debido a que el trabajo es muy corto no da tiempo al accounting a recoger la información por lo que no lo veremos aquí.
 # en un trabajo más largo sería donde se vería que MaxRSS llega al ReqMem
 ```
@@ -248,7 +248,7 @@ exit
 1. Obtener un resumen de los trabajos en la cola. Esto lo hemos ido haciendo a lo largo de la práctica.
 
 ```bash
-squeue -o "%8i %22j %4t %10u %20q %20P %10Q %5D %11l %11L %50R %10C %c" 
+squeue -o "%8i %22j %4t %10u %20q %20P %10Q %5D %11l %11L %50R %10C %c"
 ```
 
 Leyenda del formato:
@@ -339,7 +339,7 @@ mkdir -p 00-reads 01-fastqc/logs
 # vamos a crear un archivo con los nombres de los muestras
 ls ../RAW/*.fastq.gz | cut -d "/" -f 3 | cut -d "_" -f 1 | sort -u > samples_id.txt
 # Por último creamos enlaces simbólicos para cada muestra de forma homogéne en 00-reads para tenerlo a mano
-cd 00-reads 
+cd 00-reads
 cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/%_*1*.fastq.gz %_R1.fastq.gz" | bash
 cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/%_*2*.fastq.gz %_R2.fastq.gz" | bash
 ```
