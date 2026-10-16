@@ -75,7 +75,7 @@ El objetivo es realizar, desde la línea de comandos, aquellas tareas cotidianas
 
 > Nota: En [este archivo](./esquema_practica_comandos.pdf) hay un esquema con los cambios en las rutas que se van realizando a lo largo de la práctica.
 
-Abrimos una terminal en nuestro ordenador. En Linux se puede pulsar `Ctrl + Alt + T` para abrir una terminal. En windows podemos utilizar abrir una powershell para poder usar comandos de terminal de windows, o también tenemos acceso a un subsistema de linux integrado, el WSL. Este WSL podemos usarlo directamente buscando `Ubuntu` en nuestras aplicaciones, o bien a través de VSCode y su terminal.
+Abrimos una terminal en nuestro ordenador. En Linux se puede pulsar `Ctrl + Alt + T` para abrir una terminal. En windows podemos utilizar abrir una powershell para poder usar comandos de terminal de windows, o también tenemos acceso a un subsistema de linux integrado, el WSL. Este WSL podemos usarlo directamente buscando `Ubuntu` en nuestras aplicaciones, o bien a través de MobaXterm y su terminal. En MobaXterm le damos a "Start local terminal" y se nos abre un nuevo terminal.
 
 En estas prácticas vamos a usar WSL
 
@@ -84,7 +84,7 @@ En estas prácticas vamos a usar WSL
 <details>
 <summary>PREGUNTA: ¿Qué información nos muestra el prompt?</summary>
 
-Entre corchetes `[]` se muestra primero tu usuario, después el `@`, seguido del nombre del ordenador al que estás conectado y, finalmente, la ruta en la que te encuentres en ese momento. Fuera de los corchetes aparecerán los permisos con los que estás conectado, normalmente `$` si no tienes permisos de administrador.
+En azul nos muestra la fecha actual. Después en verde la hora y después en amarillo la ubicación donde nos encontramos.
 </details>
 
 Para poder conectarte al Entorno de Alta Computación (HPC) del ISCIII tienes que ejecutar el siguiente comando en la terminal que se explicará más adelante:
@@ -96,6 +96,8 @@ ssh -p 32122 <usuario>@portutatis.isciii.es
 Escribes la contraseña de tu usuario del HPC
 
 > Nota: No se muestra la contraseña a medida que escribes ni se indica ningún tipo de caracter para indicarte que estás escribiendo, así que asegurate de escribirla bien.
+
+Si nos sale una ventana para guardar el password, le damos a no.
 
 <details>
 <summary>PREGUNTA: ¿Qué información nos muestra el prompt una vez conectados al HPC??</summary>
@@ -465,7 +467,7 @@ cat *.txt
 ```bash
 pwd
 ls
-mv archivo_copiado1.txt archivo_importante.txt
+mv archivo1.txt archivo_importante.txt
 cat archivo_importante.txt
 ls
 cat /etc/passwd > archivo_importante.txt
@@ -499,7 +501,7 @@ pwd
 ls
 rm archivo1.txt
 rm -f archivo1.txt
-rm archivo_importante.txt
+rm archivo2.txt
 ls
 ```
 

@@ -70,7 +70,7 @@ El comando `ll` es lo mismo que escribir `ls -l`.
 <details>
 <summary>PREGUNTA: ¿Cuáles son los permisos del archivo <code class="code-inline">host.conf</code>?</summary>
 
-Sabemos que es un archivo de texto porque no empieza por `d`, el usuario propietario tiene permisos de lectura y escritura, pero no de ejecución. El grupo tiene permisos de lectura, pero no de escritura ni ejecución, y el resto de usuarios tienen permiso de lectura pero no de escritura ni ejecución, el usuario propietario es el usuario, el grupo es también el usuario porque está en tu home, ocupa xxx, bytes y fue modificado por ulima vez ahora mismo.
+Sabemos que es un archivo de texto porque no empieza por `d`, el usuario propietario tiene permisos de lectura y escritura, pero no de ejecución. El grupo tiene permisos de lectura, pero no de escritura ni ejecución, y el resto de usuarios tienen permiso de lectura pero no de escritura ni ejecución, el usuario propietario es tu usuario, el grupo es también tu usuario porque está en tu home, ocupa 9 bytes y fue modificado por ulima vez ahora mismo.
 </details>
 
 #### 3. Añadir permisos
@@ -110,7 +110,7 @@ ll #o ls -l
 
 ```bash
 ll
-chown -R user:hpccourse .
+chown -R <tu_usuaruio>:<tu_usuaruio> .
 ll
 ```
 
