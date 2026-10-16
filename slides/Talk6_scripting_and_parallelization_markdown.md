@@ -343,6 +343,7 @@ With MPI, the key parameters are **`--nodes`** and **`--ntasks`**. Imagine using
 #SBATCH --nodes=2
 #SBATCH --ntasks=8
 #SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=8G
 #SBATCH --time=00:30:00
 #SBATCH --partition=short_idx
@@ -351,7 +352,8 @@ With MPI, the key parameters are **`--nodes`** and **`--ntasks`**. Imagine using
 
 set -euo pipefail
 module load RAxML/8.2.12-gompi-2020a-hybrid-avx2
-mpirun -np "$SLURM_NTASKS" raxmlHPC-MPI -s datos.phy -n resultado -m GTRGAMMA
+mpirun -np "$SLURM_NTASKS" raxmlHPC-HYBRID-AVX2 \
+  -T "$SLURM_CPUS_PER_TASK" -s datos.phy -n resultado -m GTRCAT -# 8
 ```
 
 **Relevant MPI script parameters:**
@@ -359,6 +361,7 @@ mpirun -np "$SLURM_NTASKS" raxmlHPC-MPI -s datos.phy -n resultado -m GTRGAMMA
 * **`--nodes`** = how many different nodes to use.
 * **`--ntasks`** = total number of MPI processes to launch (they can be split across nodes).
 * **`--ntasks-per-node`** = how many processes per node (optional but recommended).
+* **`--cpus-per-task`** = CPUs reserved for each MPI process. This hybrid RAxML executable uses two shared-memory threads per process.
 * `$SLURM_NTASKS` = variable with the total number of tasks requested.
 
 **Debugging and usage checks:**

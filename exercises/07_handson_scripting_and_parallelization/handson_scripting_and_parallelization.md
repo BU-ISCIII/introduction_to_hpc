@@ -83,7 +83,7 @@ BASE_URL='https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/main/e
 
 for file in fastqc_demo.sbatch fastqc_failcmd.sbatch fastqc_overask.sbatch \
             array_demo.sbatch fastqc_array_samplesid.sbatch \
-            spades_openmp.sbatch raxml_mpi.sbatch; do
+            spades_openmp.sbatch raxml_mpi.sbatch raxml_demo.phy; do
   wget -O "$file" "$BASE_URL/$file"
 done
 ```
@@ -274,28 +274,15 @@ Preguntas:
 
 ### Ejercicio 2 — MPI con RAxML
 
-El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. Crea el alineamiento de prueba en el directorio de la práctica (esta escritura pequeña no es un cálculo):
+El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. El archivo `raxml_demo.phy` es un alineamiento sintético, fijo y versionado con la práctica; no debe interpretarse biológicamente. Ya se copió al directorio de trabajo al sincronizar la práctica. Compruébalo:
 
 ```bash
-srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:05:00 \
-  bash -c 'mkdir -p data && cat > data/datos.phy' << 'EOF'
-12 60
-Taxon_0001  ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT
-Taxon_0002  TGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCA
-Taxon_0003  AAAAAAAAAAAAAAACCCCCCCCCCCCCCCGGGGGGGGGGGGGGGTTTTTTTTTTTTTTT
-Taxon_0004  ATATATATATATATATATATATATATATATATATATATATATATATATATATATATATAT
-Taxon_0005  CGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCGCG
-Taxon_0006  AGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCT
-Taxon_0007  AACCAACCAACCAACCAACCAACCAACCAACCAACCAACCAACCAACCAACCAACCAACC
-Taxon_0008  GGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTTGGTT
-Taxon_0009  ACACACACACACACACACACACACACACACACACACACACACACACACACACACACACAC
-Taxon_0010  GAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGAGA
-Taxon_0011  CTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCTCT
-Taxon_0012  TTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAATTAA
-EOF
+head -n 3 raxml_demo.phy
 ```
 
-`raxml_mpi.sbatch` solicita dos nodos con cuatro tareas MPI en cada uno. Busca explícitamente un binario MPI o híbrido (`raxmlHPC-MPI-*` o `raxmlHPC-HYBRID-*`) y falla de forma clara si el módulo no proporciona ninguno; nunca sustituye silenciosamente ese binario por el serial `raxmlHPC`. Para un binario híbrido, el script fija `-T 1`: ocho procesos MPI y un hilo por proceso. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
+`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona un binario híbrido (`raxmlHPC-HYBRID-*`): cada proceso MPI usa dos hilos compartiendo memoria, por lo que el script solicita `--cpus-per-task=2` y pasa ese mismo valor mediante `-T "$SLURM_CPUS_PER_TASK"`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. El script busca explícitamente un binario MPI o híbrido y falla de forma clara si el módulo no proporciona ninguno; nunca sustituye silenciosamente ese binario por el serial `raxmlHPC`. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
+
+RAxML ejecuta ocho búsquedas independientes (`-# 8`) con CAT y compara después los árboles candidatos bajo GAMMA. El resultado final es `RAxML_bestTree.ML_searches`. Con este input el cálculo termina muy rápido; por ello, el script espera deliberadamente 20 segundos antes de lanzar RAxML. No es parte del análisis: permite abrir antes otra terminal de MobaXterm con `watch -n 1 'squeue --me'` y observar la reserva de los dos nodos.
 
 ```bash
 sbatch --chdir="$PWD" raxml_mpi.sbatch
@@ -306,8 +293,9 @@ sacct -j <JOBID> -o JobID,JobName%20,State,Elapsed,AllocCPUS,NodeList,ExitCode
 Preguntas:
 
 1. ¿Aparecen realmente dos nodos en `NodeList`?
-2. ¿Cuántos procesos MPI hay por nodo?
-3. Si cambias a `--nodes=1 --ntasks=4`, ¿qué cambia en `NodeList`? ¿Por qué este input no sirve para comparar tiempos de escalado?
+2. ¿Cuántos procesos MPI y cuántos hilos usa cada nodo? ¿Cuántas CPU se reservan en total?
+3. ¿Qué ficheros `RAxML_result.ML_searches.RUN.*` aparecen y cuál es el árbol final elegido?
+4. Si cambias a `--nodes=1 --ntasks=4 --ntasks-per-node=4`, ¿qué cambia en `NodeList`? ¿Por qué este input no sirve para comparar tiempos de escalado?
 
 ## 5. Cierre
 
