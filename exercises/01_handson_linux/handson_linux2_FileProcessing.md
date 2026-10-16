@@ -39,7 +39,7 @@ pwd
 ls
 mkdir practica_ficheros
 cd practica_ficheros
-wget https://bioinf.comav.upv.es/courses/linux/_downloads/9bce0e4eba7e74591baab487df7ca394/microarray_adenoma_hk69.csv
+wget https://plantgenomics.es/edu/linux/_downloads/9bce0e4eba7e74591baab487df7ca394/microarray_adenoma_hk69.csv
 ```
 
 `wget` es un comando que nos permite obtener un archivo a partir de una URL de internet y nos lo descarga.
