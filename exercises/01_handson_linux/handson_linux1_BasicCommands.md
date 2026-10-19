@@ -95,11 +95,12 @@ Para poder conectarte al Entorno de Alta Computación (HPC) del ISCIII tienes qu
 ssh -p 32122 <usuario>@portutatis.isciii.es
 ```
 
-Escribes la contraseña de tu usuario del HPC
+⚠️ Es importante que antes de escribir nada en el terminal compruebes los siguientes pasos: 
 
-> Nota: No se muestra la contraseña a medida que escribes ni se indica ningún tipo de caracter para indicarte que estás escribiendo, así que asegurate de escribirla bien.
-
-Si nos sale una ventana para guardar el password, le damos a no.
+- Si te pregunta si quires guardar el `fingerprint` escribimos `yes`
+- Escribes la contraseña de tu usuario del HPC
+  - 🗒️ No se muestra la contraseña a medida que escribes ni se indica ningún tipo de caracter para indicarte que estás escribiendo, así que asegurate de escribirla bien.
+- Si nos sale una ventana para guardar el password, le damos a no.
 
 <details>
 <summary>PREGUNTA: ¿Qué información nos muestra el prompt una vez conectados al HPC??</summary>
