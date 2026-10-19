@@ -131,7 +131,7 @@ nextflow run nf-core/demo -r 1.0.2 \
 En otra terminal de MobaXterm puedes observar tanto el controlador como las tareas que crea:
 
 ```bash
-watch -n 2 'squeue --me'
+watch squeue --me
 ```
 
 El trabajo `nf_demo` que enviaste con `sbatch` es el **controlador**: ejecuta Nextflow, interpreta el pipeline y envía a Slurm las tareas que ya tienen disponibles sus datos de entrada. No ejecuta necesariamente el análisis en sí. A medida que terminan tareas, Nextflow detecta sus salidas, desbloquea los procesos dependientes y envía los siguientes trabajos. Así se respeta el orden definido por los datos, sin construir a mano dependencias `afterok`.

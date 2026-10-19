@@ -19,27 +19,13 @@ mkdir -p 05-raxml_mpi-results
 RESULTS_DIR="$PWD/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
 mkdir -p "$RESULTS_DIR"
 
-RAXML_BIN=""
-for candidate in raxmlHPC-MPI-AVX2 raxmlHPC-MPI-AVX raxmlHPC-MPI \
-                 raxmlHPC-HYBRID-AVX2 raxmlHPC-HYBRID-AVX raxmlHPC-HYBRID; do
-  if command -v "$candidate" >/dev/null 2>&1; then
-    RAXML_BIN="$candidate"
-    break
-  fi
-done
-[[ -n "$RAXML_BIN" ]] || { echo "[ERROR] No MPI-enabled RAxML executable found." >&2; exit 127; }
-
-RAXML_THREADS=()
-if [[ "$RAXML_BIN" == *HYBRID* ]]; then
-  RAXML_THREADS=(-T "$SLURM_CPUS_PER_TASK")
-fi
-
 # Pausa didáctica: permite observar la reserva multinodo con squeue.
-echo "[INFO] Recursos MPI reservados; RAxML comenzará en 20 segundos."
-sleep 20
+echo "[INFO] Recursos MPI reservados; RAxML comenzará."
 
-mpirun -np "$SLURM_NTASKS" "$RAXML_BIN" "${RAXML_THREADS[@]}" \
-  -s raxml_demo.phy \
+# Ejecuta RAxML con MPI
+mpirun -np "$SLURM_NTASKS" raxmlHPC-HYBRID-AVX2 \
+  -T "$SLURM_CPUS_PER_TASK" \
+  -s data/raxml_demo.phy \
   -m GTRCAT \
   -p 12345 \
   -# 8 \

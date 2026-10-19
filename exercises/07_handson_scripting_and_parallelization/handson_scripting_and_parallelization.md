@@ -81,11 +81,13 @@ Sitúate en el directorio de la práctica y descarga los esqueletos. Si GitHub n
 cd "$ANALYSIS_DIR/07-scripting-and-parallelization"
 BASE_URL='https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/main/exercises/07_handson_scripting_and_parallelization'
 
+mkdir -p data
 for file in fastqc_demo.sbatch fastqc_failcmd.sbatch fastqc_overask.sbatch \
             array_demo.sbatch fastqc_array_samplesid.sbatch \
-            spades_openmp.sbatch raxml_mpi.sbatch raxml_demo.phy; do
+            spades_openmp.sbatch raxml_mpi.sbatch; do
   wget -O "$file" "$BASE_URL/$file"
 done
+wget -O data/raxml_demo.phy "$BASE_URL/data/raxml_demo.phy"
 ```
 
 Sincroniza el directorio completo al espacio temporal. Se hace con `srun` porque `/scratch` no admite escritura directa desde el nodo de acceso.
@@ -106,12 +108,24 @@ Los tres scripts usan rutas relativas desde `07-scripting-and-parallelization`; 
 
 > **Idea clave:** sin esta línea, un script puede mostrar un error y continuar hasta terminar aparentemente bien; con ella, Slurm puede marcarlo como `FAILED` y el `ExitCode` de `sacct` sirve para diagnosticarlo.
 
+### Qué comando usar según el estado del trabajo
+
+| Pregunta | Comando | Cuándo usarlo |
+| --- | --- | --- |
+| ¿Está el trabajo pendiente o ejecutándose? | `squeue --me` | Mientras el trabajo está en cola (`PD`) o en ejecución (`R`). Al terminar desaparece de esta lista. |
+| ¿Por qué está pendiente o qué recursos tiene asignados? | `scontrol show job <JOBID>` | Principalmente mientras está pendiente o ejecutándose. Muestra, entre otros datos, `Reason`, recursos solicitados y nodo asignado. |
+| ¿Cómo terminó y qué recursos utilizó? | `sacct -j <JOBID> ...` | Después de terminar. Muestra el historial: estado final, tiempo, memoria, CPU y `ExitCode`. Puede tardar unos segundos en aparecer. |
+
+> **Regla práctica:** `squeue` para el presente, `scontrol` para el detalle del presente y `sacct` para el resultado final. `squeue` no es un historial de trabajos.
+
 ### Ejercicio 1 — FastQC correcto
+
+El script reserva cuatro CPU con `--cpus-per-task=4` y pasa exactamente ese valor a FastQC mediante `-t "$SLURM_CPUS_PER_TASK"`. Solicitar CPU a Slurm no paraleliza por sí solo el programa: el parámetro `-t` es el que comunica a FastQC cuántos hilos puede utilizar.
 
 Revisa primero el script. Antes de enviarlo, abre una **segunda pestaña de MobaXterm** conectada al HPC y deja este comando ejecutándose. Se actualizará cada segundo; termina con `Ctrl+C` cuando el trabajo desaparezca de la cola.
 
 ```bash
-watch -n 1 'squeue --me'
+watch squeue --me
 ```
 
 En la primera pestaña, envía el trabajo:
@@ -121,7 +135,7 @@ less fastqc_demo.sbatch
 sbatch --chdir="$PWD" fastqc_demo.sbatch
 ```
 
-Mientras está activo y al terminar, consulta:
+Mientras está activo, usa `squeue` y `scontrol`. Cuando termine y desaparezca de `squeue`, consulta `sacct` y los logs:
 
 ```bash
 squeue --me
@@ -274,15 +288,19 @@ Preguntas:
 
 ### Ejercicio 2 — MPI con RAxML
 
-El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. El archivo `raxml_demo.phy` es un alineamiento sintético, fijo y versionado con la práctica; no debe interpretarse biológicamente. Ya se copió al directorio de trabajo al sincronizar la práctica. Compruébalo:
+El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. El archivo `data/raxml_demo.phy` es un alineamiento de ADN de ejemplo procedente de IQ-TREE, fijo y versionado con la práctica. Ya se copió al directorio de trabajo al sincronizar la práctica. Compruébalo:
 
 ```bash
-head -n 3 raxml_demo.phy
+head -n 3 data/raxml_demo.phy
 ```
 
-`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona un binario híbrido (`raxmlHPC-HYBRID-*`): cada proceso MPI usa dos hilos compartiendo memoria, por lo que el script solicita `--cpus-per-task=2` y pasa ese mismo valor mediante `-T "$SLURM_CPUS_PER_TASK"`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. El script busca explícitamente un binario MPI o híbrido y falla de forma clara si el módulo no proporciona ninguno; nunca sustituye silenciosamente ese binario por el serial `raxmlHPC`. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
+El fichero está en formato **PHYLIP**, uno de los formatos que acepta RAxML. La primera línea indica `17 1998`: contiene 17 secuencias (taxones) y cada una tiene 1.998 posiciones. Cada línea posterior tiene un identificador, por ejemplo `LngfishAu`, seguido de su secuencia de nucleótidos. Todas las secuencias tienen la misma longitud y sus posiciones están alineadas: la posición 1 de una secuencia se compara con la posición 1 de todas las demás. Es el alineamiento de entrada a partir del cual RAxML busca árboles filogenéticos.
 
-RAxML ejecuta ocho búsquedas independientes (`-# 8`) con CAT y compara después los árboles candidatos bajo GAMMA. El resultado final es `RAxML_bestTree.ML_searches`. Con este input el cálculo termina muy rápido; por ello, el script espera deliberadamente 20 segundos antes de lanzar RAxML. No es parte del análisis: permite abrir antes otra terminal de MobaXterm con `watch -n 1 'squeue --me'` y observar la reserva de los dos nodos.
+`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona el binario híbrido `raxmlHPC-HYBRID-AVX2`: cada proceso MPI usa dos hilos compartiendo memoria, por lo que el script solicita `--cpus-per-task=2` y pasa ese mismo valor mediante `-T "$SLURM_CPUS_PER_TASK"`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
+
+RAxML ejecuta ocho búsquedas independientes (`-# 8`) y conserva el árbol con mejor puntuación en `RAxML_bestTree.ML_searches`. El objetivo del ejercicio es observar cómo se reparten los procesos MPI, no interpretar ese árbol. Con este input el cálculo termina muy rápido; por ello, el script espera deliberadamente 60 segundos antes de lanzar RAxML. No es parte del análisis: permite abrir antes otra terminal de MobaXterm con `watch squeue --me` y observar la reserva de los dos nodos.
+
+> **Nota técnica opcional:** `-m GTRCAT` es el modelo indicado en el script. CAT es una aproximación rápida para tener en cuenta que las posiciones de un alineamiento no evolucionan todas a la misma velocidad. Al finalizar, RAxML puede mostrar en el log una evaluación más exhaustiva bajo GAMMA. No es necesario conocer esos modelos para comprender la paralelización MPI.
 
 ```bash
 sbatch --chdir="$PWD" raxml_mpi.sbatch

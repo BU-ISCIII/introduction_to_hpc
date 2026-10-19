@@ -16,6 +16,8 @@ mkdir -p 04-openmp-spades-results
 R1=../00-reads/ERR2261314_R1.fastq.gz
 R2=../00-reads/ERR2261314_R2.fastq.gz
 
+#export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
 spades.py -1 "$R1" -2 "$R2" -o 04-openmp-spades-results/spades_sample01 \
     --threads "$SLURM_CPUS_PER_TASK" \
     --mem "$SLURM_MEM_PER_NODE"

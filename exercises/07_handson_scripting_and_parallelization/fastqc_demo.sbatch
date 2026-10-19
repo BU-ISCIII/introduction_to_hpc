@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=fastqc_demo
 #SBATCH --partition=short_idx
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=4G
 #SBATCH --time=00:05:00
 #SBATCH --output=logs/%x-%j.out
@@ -21,6 +21,7 @@ mkdir -p 01-fastqc-demo-results
 
 # Ejecuta fastqc
 fastqc \
+  -t 4 \ # we can also use slurm env var: "$SLURM_CPUS_PER_TASK"
   ../00-reads/virus1_R1.fastq.gz \
   ../00-reads/virus1_R2.fastq.gz \
   -o 01-fastqc-demo-results
