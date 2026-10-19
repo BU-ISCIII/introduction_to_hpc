@@ -89,6 +89,8 @@ En azul nos muestra la fecha actual. Después en verde la hora y después en ama
 
 Para poder conectarte al Entorno de Alta Computación (HPC) del ISCIII tienes que ejecutar el siguiente comando en la terminal que se explicará más adelante:
 
+> Nota: Tienes que estar conectado a la red "ISCIII" o a la VPN para poder acceder al HPC. No sirven las redes de Invitado ni eduroam.
+
 ```bash
 ssh -p 32122 <usuario>@portutatis.isciii.es
 ```
