@@ -20,7 +20,8 @@ RESULTS_DIR="$PWD/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
 mkdir -p "$RESULTS_DIR"
 
 # Pausa didáctica: permite observar la reserva multinodo con squeue.
-echo "[INFO] Recursos MPI reservados; RAxML comenzará."
+echo "[INFO] Recursos MPI reservados; RAxML comenzará en 60 segundos."
+sleep 60
 
 # Ejecuta RAxML con MPI
 mpirun -np "$SLURM_NTASKS" raxmlHPC-HYBRID-AVX2 \

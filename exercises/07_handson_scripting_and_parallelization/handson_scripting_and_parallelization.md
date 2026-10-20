@@ -15,82 +15,47 @@ En esta práctica enviarás scripts al planificador Slurm, diagnosticarás un tr
 - Anota el identificador que devuelve `sbatch`. Los identificadores cambian en cada envío.
 - Sustituye `<JOBID>` por el identificador real, sin los signos `<` y `>`.
 
-Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_hpc_course`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
+Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_workdir`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
 
 ```bash
-export COURSE_NAME="${USER}_hpc_course"
+export COURSE_NAME="${USER}_workdir"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
+export TEMPLATE_DATA_DIR="/data/courses/hpc_course/20261015_HPC-COURSE_profesor00"
 
+# Copia toda la plantilla a tu carpeta personal. El directorio destino se crea
+# automáticamente si no existe; vuelve a ejecutar este comando si el docente
+# actualiza un script de la plantilla.
+rsync -rtlv "$TEMPLATE_DATA_DIR/" "$DATA_DIR/"
+
+# Los scripts escriben sus ficheros .out y .err en estas carpetas.
+mkdir -p "$ANALYSIS_DIR/07-scripting-and-parallelization/logs"
+mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
+
+# Comprueba que la carpeta existe, contiene los FASTQ y permite entrar en ella.
 ls -ld "$DATA_DIR" "$DATA_DIR/RAW" "$ANALYSIS_DIR"
+ls -lh "$DATA_DIR/RAW"
+cd "$DATA_DIR" && pwd
 ```
 
-Comprueba también los recursos reales antes del ejercicio de memoria y los módulos antes de comenzar. Si alguno de estos módulos no aparece, avisa al docente: las versiones de los scripts son parte del material que se debe validar en Portutatis.
-
-```bash
-sinfo -N -h -o '%N  %P  %c CPUs  %m MB'
-module spider FastQC
-module spider SPAdes
-module spider RAxML
-```
+> Comprueba que aparecen los FASTQ en `RAW/` y que `pwd` muestra tu propio directorio antes de seguir. Se copia toda la plantilla, incluidos los datos preparados y los scripts de las prácticas. Si el docente actualiza un script durante la sesión, repite el `rsync`: actualizará los ficheros presentes en la plantilla, pero no elimina los resultados que hayas creado en carpetas que no existan en ella.
 
 ## 1. Preparación de datos y scripts
 
-### 1.1 Crear la zona de trabajo en `/data`
+### 1.1 Comprobación rápida de los datos
 
-Los FASTQ de esta edición ya están en `RAW/`. Vamos a generar una lista de muestras y enlaces simbólicos homogéneos en `ANALYSIS/00-reads`. Así los scripts no dependen de si los datos originales se llaman `_1/_2` o `_R1/_R2`.
-
-```bash
-mkdir -p "$ANALYSIS_DIR/07-scripting-and-parallelization/logs"
-mkdir -p "$ANALYSIS_DIR/00-reads"
-cd "$ANALYSIS_DIR"
-
-{
-  find ../RAW -maxdepth 1 -type f -name '*_1.fastq.gz' -printf '%f\n' | sed 's/_1\.fastq\.gz$//'
-  find ../RAW -maxdepth 1 -type f -name '*_R1.fastq.gz' -printf '%f\n' | sed 's/_R1\.fastq\.gz$//'
-} | sort -u > samples_id.txt
-
-cat samples_id.txt
-```
-
-Ahora crea los enlaces. El bucle detecta los dos esquemas de nombres presentes en `RAW/`.
+La plantilla ya contiene los FASTQ en `RAW/`, una lista de cinco muestras en `ANALYSIS/samples_id.txt` y enlaces simbólicos homogéneos en `ANALYSIS/00-reads`. Así los scripts no dependen de si los datos originales se llaman `_1/_2` o `_R1/_R2`.
 
 ```bash
-cd "$ANALYSIS_DIR/00-reads"
-while read -r sample; do
-  if [[ -f "../../RAW/${sample}_1.fastq.gz" ]]; then
-    ln -sfn "../../RAW/${sample}_1.fastq.gz" "${sample}_R1.fastq.gz"
-    ln -sfn "../../RAW/${sample}_2.fastq.gz" "${sample}_R2.fastq.gz"
-  else
-    ln -sfn "../../RAW/${sample}_R1.fastq.gz" "${sample}_R1.fastq.gz"
-    ln -sfn "../../RAW/${sample}_R2.fastq.gz" "${sample}_R2.fastq.gz"
-  fi
-done < ../samples_id.txt
-
-ls -l
+cat "$ANALYSIS_DIR/samples_id.txt"
+ls -l "$ANALYSIS_DIR/00-reads"
+find -L "$ANALYSIS_DIR/00-reads"
 ```
 
-> Debes ver cinco muestras: `ERR2261314`, `ERR2261315`, `ERR2261318`, `virus1` y `virus2`. Comprueba que los enlaces no están rotos con `find -L . -type l` (no debe mostrar nada).
+Debes ver cinco muestras: `ERR2261314`, `ERR2261315`, `ERR2261318`, `virus1` y `virus2`. El último comando no debe mostrar nada: cualquier salida indicaría un enlace roto y habría que avisar al docente.
 
-### 1.2 Descargar los scripts y copiar a `/scratch`
-
-Sitúate en el directorio de la práctica y descarga los esqueletos. Si GitHub no estuviese accesible desde el clúster, el docente facilitará esos mismos ficheros por otra vía.
-
-```bash
-cd "$ANALYSIS_DIR/07-scripting-and-parallelization"
-BASE_URL='https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/main/exercises/07_handson_scripting_and_parallelization'
-
-mkdir -p data
-for file in fastqc_demo.sbatch fastqc_failcmd.sbatch fastqc_overask.sbatch \
-            array_demo.sbatch fastqc_array_samplesid.sbatch \
-            spades_openmp.sbatch raxml_mpi.sbatch; do
-  wget -O "$file" "$BASE_URL/$file"
-done
-wget -O data/raxml_demo.phy "$BASE_URL/data/raxml_demo.phy"
-```
-
-Sincroniza el directorio completo al espacio temporal. Se hace con `srun` porque `/scratch` no admite escritura directa desde el nodo de acceso.
+### 1.2 Sincronizar la práctica a `/scratch`
 
 ```bash
 srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
@@ -118,28 +83,35 @@ Los tres scripts usan rutas relativas desde `07-scripting-and-parallelization`; 
 
 > **Regla práctica:** `squeue` para el presente, `scontrol` para el detalle del presente y `sacct` para el resultado final. `squeue` no es un historial de trabajos.
 
-### Ejercicio 1 — FastQC correcto
+### Ejercicio 1 — FastQC correcto (`fastqc_demo.sbatch`)
+
+Explora el script:
+```bash
+more fastqc_demo.sbatch
+```
 
 El script reserva cuatro CPU con `--cpus-per-task=4` y pasa exactamente ese valor a FastQC mediante `-t "$SLURM_CPUS_PER_TASK"`. Solicitar CPU a Slurm no paraleliza por sí solo el programa: el parámetro `-t` es el que comunica a FastQC cuántos hilos puede utilizar.
 
-Revisa primero el script. Antes de enviarlo, abre una **segunda pestaña de MobaXterm** conectada al HPC y deja este comando ejecutándose. Se actualizará cada segundo; termina con `Ctrl+C` cuando el trabajo desaparezca de la cola.
+Ejecuta el trabajo:
+```bash
+sbatch --chdir="$PWD" fastqc_demo.sbatch
+```
+
+En una segunda pestaña de MobaXterm, monitoriza el trabajo mientras está activo. Se actualizará cada segundo; termina con `Ctrl+C` cuando el trabajo desaparezca de la cola:
 
 ```bash
 watch squeue --me
 ```
 
-En la primera pestaña, envía el trabajo:
+Consulta los detalles de la reserva mientras esté activo:
 
 ```bash
-less fastqc_demo.sbatch
-sbatch --chdir="$PWD" fastqc_demo.sbatch
+scontrol show job <JOBID> | grep -E 'JobName|Partition|NumCPUs|TRES|NodeList|Reason|TimeLimit'
 ```
 
-Mientras está activo, usa `squeue` y `scontrol`. Cuando termine y desaparezca de `squeue`, consulta `sacct` y los logs:
+Cuando termine, consulta el historial y los logs:
 
 ```bash
-squeue --me
-scontrol show job <JOBID> | grep -E 'JobName|Partition|NumCPUs|TRES|NodeList|Reason|TimeLimit'
 sacct -j <JOBID> -o JobID,JobName,State,Elapsed,MaxRSS,AllocCPUS,TotalCPU,ExitCode
 less "logs/fastqc_demo-<JOBID>.out"
 less "logs/fastqc_demo-<JOBID>.err"
@@ -152,13 +124,31 @@ Preguntas:
 2. ¿Qué estado y `ExitCode` tiene el trabajo?
 3. ¿Cuánto tardó y qué `MaxRSS` alcanzó?
 
-### Ejercicio 2 — Fallo por una entrada inexistente
+### Ejercicio 2 — Entrada inexistente (`fastqc_failcmd.sbatch`)
+
+Explora el script:
+
+```bash
+more fastqc_failcmd.sbatch
+```
 
 `fastqc_failcmd.sbatch` referencia deliberadamente un FASTQ inexistente (`does_not_exist_R1.fastq.gz`). No cambies el script antes de enviarlo.
 
+Ejecuta el trabajo:
+
 ```bash
-less fastqc_failcmd.sbatch
 sbatch --chdir="$PWD" fastqc_failcmd.sbatch
+```
+
+El trabajo es muy corto, pero puedes intentar observarlo mientras está activo:
+
+```bash
+watch squeue --me
+```
+
+Cuando termine, consulta el historial y el error:
+
+```bash
 sacct -j <JOBID> -o JobID,State,Elapsed,ExitCode
 tail -n 20 "logs/fastqc_fail-<JOBID>.err"
 ```
@@ -170,9 +160,17 @@ Preguntas:
 3. Aunque el script use `set -euo pipefail`, ¿por qué Bash no puede detenerlo por este aviso? Pista: `set -e` sólo actúa si el comando devuelve un código distinto de cero.
 4. ¿Cuál sería el cambio mínimo para corregir la ruta de entrada?
 
-### Ejercicio 3 — Solicitud de memoria imposible
+### Ejercicio 3 — Solicitud de memoria imposible (`fastqc_overask.sbatch`)
+
+Explora el script:
+
+```bash
+more fastqc_overask.sbatch
+```
 
 El script `fastqc_overask.sbatch` pide `2T` de RAM. En Portutatis, el nodo con más memoria tiene `2.031.000 MB` (aproximadamente 1,94 TiB), por lo que esta solicitud supera la capacidad de cualquier nodo. En una futura edición del curso, comprueba el máximo con `sinfo` y ajusta `--mem` si cambia el hardware.
+
+Intenta enviarlo:
 
 ```bash
 sbatch --chdir="$PWD" fastqc_overask.sbatch
@@ -208,15 +206,17 @@ Preguntas:
 
 Un *job array* envía muchas tareas con el mismo script. Cada tarea tiene el mismo `SLURM_ARRAY_JOB_ID` y un `SLURM_ARRAY_TASK_ID` distinto. El patrón `%A_%a` en los logs evita que se mezclen sus salidas.
 
-### Ejercicio 1 — Dos muestras con índices consecutivos
+### Ejercicio 1 — Dos muestras con índices consecutivos (`array_demo.sbatch`)
+
+Explora primero el script:
+
+```bash
+more array_demo.sbatch
+```
 
 Un *job array* no es un único trabajo que recorre muestras con un bucle. Al enviar un array, Slurm crea varias **tareas independientes** a partir del mismo script. Cada tarea puede empezar, esperar o terminar en un momento distinto, pero todas comparten la misma configuración de recursos.
 
-En este ejemplo, `array_demo.sbatch` procesa `virus1` y `virus2`. Antes de enviarlo, explora el script:
-
-```bash
-less array_demo.sbatch
-```
+En este ejemplo, `array_demo.sbatch` procesa `virus1` y `virus2`.
 
 Identifica estas líneas:
 
@@ -235,9 +235,27 @@ Por tanto, una misma plantilla produce esta correspondencia:
 | 1 | `1` | `virus1_R1.fastq.gz` y `virus1_R2.fastq.gz` |
 | 2 | `2` | `virus2_R1.fastq.gz` y `virus2_R2.fastq.gz` |
 
+Envía el array:
+
 ```bash
 sbatch --chdir="$PWD" array_demo.sbatch
-squeue --me
+```
+
+Monitoriza las dos tareas mientras esperan o se ejecutan. El script espera 60 segundos antes de iniciar FastQC, para que dé tiempo a observarlas:
+
+```bash
+watch squeue --me
+```
+
+Consulta el detalle de una tarea activa, por ejemplo la tarea 1:
+
+```bash
+scontrol show job <ARRAY_JOBID>_1 | grep -E 'JobState|JobName|Partition|NumCPUs|TRES|NodeList|Reason'
+```
+
+Cuando finalice el array, consulta el historial y los resultados:
+
+```bash
 sacct -j <ARRAY_JOBID> -o JobID,JobName%20,State,Elapsed,MaxRSS,ExitCode
 find 02-array-demo-results -maxdepth 2 -type f -name '*.html'
 ```
@@ -250,22 +268,52 @@ Preguntas:
 2. ¿Qué archivos de log corresponden a cada tarea?
 3. ¿Cuál fue el `MaxRSS` de cada tarea?
 
-### Ejercicio 2 — Array a partir de `samples_id.txt`
+### Ejercicio 2 — Array a partir de `samples_id.txt` (`fastqc_array_samplesid.sbatch`)
 
-Este array obtiene la muestra de la línea que corresponde a su índice. El rango se calcula desde el fichero para que no haya que modificar el script cuando cambie la lista. Limita a dos tareas simultáneas: es una buena práctica cuando el conjunto puede crecer.
+Explora el script:
+
+```bash
+more fastqc_array_samplesid.sbatch
+```
+
+Este array obtiene la muestra de la línea que corresponde a su índice. El rango se calcula desde el fichero para que no haya que modificar el script cuando cambie la lista. Todas las tareas del array se envían sin limitar su concurrencia.
 
 En el script, la asignación siguiente realiza el emparejamiento entre tarea y muestra:
 
 ```bash
+# NO EJECUTAR!!
 SAMPLE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$IDS_FILE")
 ```
 
 `$(...)` guarda en `SAMPLE` la salida del comando interno. `sed -n` no imprime las líneas por defecto y la orden `p` imprime solo la línea indicada: para la tarea 1, la expresión se convierte en `1p` y se lee la primera línea de `samples_id.txt`; para la tarea 2, `2p` y la segunda. Por tanto, cada tarea recibe un identificador de muestra distinto sin que haya un bucle que lance FastQC manualmente.
 
+Calcula el número de muestras:
+
 ```bash
 N_SAMPLES=$(wc -l < "$SCRATCH_DIR/ANALYSIS/samples_id.txt")
-sbatch --chdir="$PWD" --array="1-${N_SAMPLES}%2" fastqc_array_samplesid.sbatch
+```
 
+Envía el array:
+
+```bash
+sbatch --chdir="$PWD" --array="1-${N_SAMPLES}" fastqc_array_samplesid.sbatch
+```
+
+Monitoriza las tareas mientras están activas:
+
+```bash
+watch squeue --me
+```
+
+Consulta el detalle de una tarea activa, por ejemplo la tarea 1:
+
+```bash
+scontrol show job <ARRAY_JOBID>_1 | grep -E 'JobState|JobName|Partition|NumCPUs|TRES|NodeList|Reason'
+```
+
+Cuando termine el array, consulta el historial y los resultados:
+
+```bash
 sacct -j <ARRAY_JOBID> -o JobID,State,Elapsed,MaxRSS,ExitCode
 find 03-fastqc-array-results -maxdepth 2 -type f -name '*.html'
 ```
@@ -275,7 +323,7 @@ El script valida que exista un identificador y los dos FASTQ antes de ejecutar F
 Preguntas:
 
 1. ¿Por qué el rango se calcula con `wc -l` y no se escribe a mano?
-2. ¿Qué efecto tiene `%2`?
+2. ¿Cuántas tareas se enviarán si `samples_id.txt` contiene cinco muestras?
 3. ¿Cómo reenviarías únicamente la tarea 3 si hubiese fallado?
 
 ## 4. OpenMP frente a MPI
@@ -287,13 +335,37 @@ Preguntas:
 
 Pedir recursos no paraleliza un programa por sí solo: hay que comunicar el número de hilos o procesos al ejecutable.
 
-### Ejercicio 1 — OpenMP con SPAdes
+### Ejercicio 1 — OpenMP con SPAdes (`spades_openmp.sbatch`)
+
+Explora el script:
+
+```bash
+more spades_openmp.sbatch
+```
 
 El script solicita 16 CPU para un único proceso y pasa ese valor a `spades.py` mediante `--threads "$SLURM_CPUS_PER_TASK"`.
 
+Envía el trabajo:
+
 ```bash
 sbatch --chdir="$PWD" spades_openmp.sbatch
-squeue --me
+```
+
+Monitoriza el trabajo mientras está activo:
+
+```bash
+watch squeue --me
+```
+
+Consulta el detalle de los recursos asignados mientras está activo:
+
+```bash
+scontrol show job <JOBID> | grep -E 'JobState|Partition|NumCPUs|TRES|NodeList|Reason'
+```
+
+Cuando termine, consulta el historial:
+
+```bash
 sacct -j <JOBID> -o JobID,State,Elapsed,MaxRSS,AllocCPUS,TotalCPU,NodeList,ExitCode
 ```
 
@@ -305,7 +377,13 @@ Preguntas:
 2. ¿Qué parámetro de SPAdes recibe el número de CPU que concede Slurm?
 3. ¿Qué inconveniente tendría pedir 32 CPU y 64 GB si el análisis no los utiliza?
 
-### Ejercicio 2 — MPI con RAxML
+### Ejercicio 2 — MPI con RAxML (`raxml_mpi.sbatch`)
+
+Explora el script:
+
+```bash
+more raxml_mpi.sbatch
+```
 
 El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. El archivo `data/raxml_demo.phy` es un alineamiento de ADN de ejemplo procedente de IQ-TREE, fijo y versionado con la práctica. Ya se copió al directorio de trabajo al sincronizar la práctica. Compruébalo:
 
@@ -321,9 +399,27 @@ RAxML ejecuta ocho búsquedas independientes (`-# 8`) y conserva el árbol con m
 
 > **Nota técnica opcional:** `-m GTRCAT` es el modelo indicado en el script. CAT es una aproximación rápida para tener en cuenta que las posiciones de un alineamiento no evolucionan todas a la misma velocidad. Al finalizar, RAxML puede mostrar en el log una evaluación más exhaustiva bajo GAMMA. No es necesario conocer esos modelos para comprender la paralelización MPI.
 
+Envía el trabajo:
+
 ```bash
 sbatch --chdir="$PWD" raxml_mpi.sbatch
-squeue --me
+```
+
+Monitoriza la reserva de los dos nodos mientras está activa:
+
+```bash
+watch squeue --me
+```
+
+Consulta el detalle de la reserva mientras está activa:
+
+```bash
+scontrol show job <JOBID> | grep -E 'JobState|Partition|NumNodes|NumCPUs|TRES|NodeList|Reason'
+```
+
+Cuando termine, consulta el historial:
+
+```bash
 sacct -j <JOBID> -o JobID,JobName%20,State,Elapsed,AllocCPUS,NodeList,ExitCode
 ```
 

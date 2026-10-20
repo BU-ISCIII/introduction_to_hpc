@@ -14,30 +14,36 @@ En esta sesión se ejecutará un único caso, pequeño y reproducible: `nf-core/
 
 ### 1.1 Rutas y comprobaciones
 
-Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_hpc_course`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
+Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_workdir`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
 
 ```bash
-export COURSE_NAME="${USER}_hpc_course"
+export COURSE_NAME="${USER}_workdir"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
+export TEMPLATE_DATA_DIR="/data/courses/hpc_course/20261015_HPC-COURSE_profesor00"
 
+# Copia toda la plantilla a tu carpeta personal. El directorio destino se crea
+# automáticamente si no existe; repite el comando si el docente actualiza un script.
+rsync -rtlv "$TEMPLATE_DATA_DIR/" "$DATA_DIR/"
+mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
+
+# Comprueba que la carpeta personal existe y que puedes entrar en ella.
 ls -ld "$DATA_DIR" "$ANALYSIS_DIR"
+cd "$DATA_DIR" && pwd
 module spider Nextflow
 module spider singularity
 ```
 
-La configuración y el script se editan en `/data`; tanto `work/` como la caché de Nextflow y las imágenes de Singularity se crean en `/scratch`. No ejecutes el workflow en el nodo de acceso.
+Ejecuta el bloque completo en cada terminal nueva: cambiar solo `COURSE_NAME` no actualiza las variables derivadas. Comprueba que `pwd` muestra tu directorio personal antes de continuar. Si el docente actualiza un script durante la sesión, repite el `rsync`: actualizará los ficheros presentes en la plantilla, pero no elimina los resultados que hayas creado en carpetas que no existan en ella. La configuración y el script se editan en `/data`; tanto `work/` como la caché de Nextflow y las imágenes de Singularity se crean en `/scratch`. No ejecutes el workflow en el nodo de acceso.
 
-### 1.2 Crear y sincronizar la práctica
+### 1.2 Sincronizar la práctica
+
+La configuración y el script validados ya se han copiado desde la plantilla. Entra en el directorio de la práctica y sincronízalo a `/scratch`.
 
 ```bash
-mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
 cd "$ANALYSIS_DIR/08-scientific-workflows-nextflow"
-
-BASE_URL='https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/main/exercises/08_handson_scientific_workflows_nextflow'
-wget -O nextflow.config "$BASE_URL/nextflow.config"
-wget -O nextflow_demo.sbatch "$BASE_URL/nextflow_demo.sbatch"
+ls -l
 
 srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
   rsync -avh "$DATA_DIR/" "$SCRATCH_DIR/"
