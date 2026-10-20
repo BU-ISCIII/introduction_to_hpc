@@ -15,10 +15,10 @@ En esta práctica enviarás scripts al planificador Slurm, diagnosticarás un tr
 - Anota el identificador que devuelve `sbatch`. Los identificadores cambian en cada envío.
 - Sustituye `<JOBID>` por el identificador real, sin los signos `<` y `>`.
 
-Define las rutas una vez por terminal. El nombre de carpeta corresponde a esta edición del curso:
+Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_hpc_course`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
 
 ```bash
-export COURSE_NAME="20261015_HPC-COURSE_${USER}"
+export COURSE_NAME="${USER}_hpc_course"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
@@ -187,6 +187,17 @@ sbatch: error: Batch job submission failed: Requested node configuration is not 
 
 No habrá `JOBID`, no aparecerá nada en `squeue` y no hay que usar `scancel`: el trabajo nunca ha entrado en la cola.
 
+En cambio, una solicitud que **sí puede satisfacerse** pero para la que todos los nodos adecuados están ocupados quedará en estado `PD` con un `Reason` como `Resources`. En ese caso sí existe un `JOBID` y se puede inspeccionar y cancelar si se envió por error:
+
+```bash
+squeue --me
+scontrol show job <JOBID> | grep -E 'JobState|Reason|ReqTRES|NodeList'
+scancel <JOBID>
+sacct -j <JOBID> -o JobID,State,Elapsed,ExitCode
+```
+
+Tras `scancel`, el trabajo desaparece de `squeue` y normalmente queda registrado como `CANCELLED` en `sacct`. No ejecutes `scancel` sobre trabajos de otros usuarios.
+
 Preguntas:
 
 1. ¿Qué recurso solicitado no puede satisfacer el clúster?
@@ -242,6 +253,14 @@ Preguntas:
 ### Ejercicio 2 — Array a partir de `samples_id.txt`
 
 Este array obtiene la muestra de la línea que corresponde a su índice. El rango se calcula desde el fichero para que no haya que modificar el script cuando cambie la lista. Limita a dos tareas simultáneas: es una buena práctica cuando el conjunto puede crecer.
+
+En el script, la asignación siguiente realiza el emparejamiento entre tarea y muestra:
+
+```bash
+SAMPLE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$IDS_FILE")
+```
+
+`$(...)` guarda en `SAMPLE` la salida del comando interno. `sed -n` no imprime las líneas por defecto y la orden `p` imprime solo la línea indicada: para la tarea 1, la expresión se convierte en `1p` y se lee la primera línea de `samples_id.txt`; para la tarea 2, `2p` y la segunda. Por tanto, cada tarea recibe un identificador de muestra distinto sin que haya un bucle que lance FastQC manualmente.
 
 ```bash
 N_SAMPLES=$(wc -l < "$SCRATCH_DIR/ANALYSIS/samples_id.txt")

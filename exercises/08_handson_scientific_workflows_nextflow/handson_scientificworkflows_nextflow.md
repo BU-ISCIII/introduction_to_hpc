@@ -14,10 +14,10 @@ En esta sesión se ejecutará un único caso, pequeño y reproducible: `nf-core/
 
 ### 1.1 Rutas y comprobaciones
 
-Define las rutas de esta edición del curso una vez por terminal:
+Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_hpc_course`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
 
 ```bash
-export COURSE_NAME="20261015_HPC-COURSE_${USER}"
+export COURSE_NAME="${USER}_hpc_course"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
