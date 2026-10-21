@@ -12,24 +12,28 @@ En esta sesión se ejecutará un único caso, pequeño y reproducible: `nf-core/
 
 ## 1. Preparación
 
-### 1.1 Reutilizar el entorno de la práctica 7
+### 1.1 Reutilizar el proyecto de las prácticas anteriores
 
-Reutiliza tu directorio personal `${USER}_workdir`, creado en la práctica anterior. Si has abierto una terminal nueva, vuelve a definir las variables y sincroniza la plantilla para obtener el material de la práctica 8:
+Reutiliza el directorio `FECHA_HPC-COURSE_${USER}` creado en la práctica 4 y utilizado en las prácticas 5 a 7. No crees otra carpeta de curso ni copies de nuevo los FASTQ. Si has abierto una terminal nueva, vuelve a definir las rutas y recibe únicamente el material de la práctica 8:
 
 ```bash
-export COURSE_NAME="${USER}_workdir"
+# Escribe la fecha que aparece en el nombre de tu carpeta creada en la práctica 4.
+# Para esta edición del curso es 20261021.
+export COURSE_NAME="20261021_HPC-COURSE_${USER}"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
-export TEMPLATE_DATA_DIR="/data/courses/hpc_course/20261015_HPC-COURSE_profesor00"
+export TEMPLATE_ANALYSIS_DIR="/data/courses/hpc_course/20261021_HPC-COURSE_profesor00/ANALYSIS"
 
-rsync -rtlv "$TEMPLATE_DATA_DIR/" "$DATA_DIR/"
 mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
+rsync -rtlv \
+  "$TEMPLATE_ANALYSIS_DIR/08-scientific-workflows-nextflow/" \
+  "$ANALYSIS_DIR/08-scientific-workflows-nextflow/"
 
 cd "$DATA_DIR" && pwd
 ```
 
-El `rsync` actualiza los ficheros de la plantilla sin borrar tus resultados. El análisis se ejecutará desde `/scratch`; las imágenes de Singularity se leen de la caché compartida preparada por el docente. No ejecutes el workflow en el nodo de acceso.
+El `rsync` actualiza los scripts y la configuración de la práctica 8 sin borrar tus resultados anteriores. El análisis se ejecutará desde `/scratch`; las imágenes de Singularity se leen de la caché compartida preparada por el docente. No ejecutes el workflow en el nodo de acceso.
 
 ### 1.2 Sincronizar la práctica
 

@@ -15,42 +15,41 @@ En esta práctica enviarás scripts al planificador Slurm, diagnosticarás un tr
 - Anota el identificador que devuelve `sbatch`. Los identificadores cambian en cada envío.
 - Sustituye `<JOBID>` por el identificador real, sin los signos `<` y `>`.
 
-Define las rutas una vez por terminal. Cada participante trabaja en una carpeta propia, construida automáticamente a partir de su usuario: por ejemplo, el usuario `alumno01` usa `alumno01_workdir`. Así los resultados y ficheros temporales de distintos alumnos no se mezclan.
+Las prácticas 4 y 5 ya crearon tu directorio de curso, con el formato `FECHA_HPC-COURSE_${USER}`, los FASTQ en `RAW/` y los enlaces de `ANALYSIS/00-reads`. No crees otro directorio ni vuelvas a copiar los FASTQ. Define las rutas de ese proyecto existente una vez por terminal:
 
 ```bash
-export COURSE_NAME="${USER}_workdir"
+# Escribe la fecha que aparece en el nombre de tu carpeta creada en la práctica 4.
+# Para esta edición del curso es 20261021.
+export COURSE_NAME="20261021_HPC-COURSE_${USER}"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
-export TEMPLATE_DATA_DIR="/data/courses/hpc_course/20261015_HPC-COURSE_profesor00"
+export TEMPLATE_ANALYSIS_DIR="/data/courses/hpc_course/20261021_HPC-COURSE_profesor00/ANALYSIS"
 
-# Copia toda la plantilla a tu carpeta personal. El directorio destino se crea
-# automáticamente si no existe; vuelve a ejecutar este comando si el docente
-# actualiza un script de la plantilla.
-rsync -rtlv "$TEMPLATE_DATA_DIR/" "$DATA_DIR/"
-
-# Los scripts escriben sus ficheros .out y .err en estas carpetas.
+# Crea únicamente la carpeta de esta práctica y recibe sus scripts del docente.
 mkdir -p "$ANALYSIS_DIR/07-scripting-and-parallelization/logs"
-mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
+rsync -rtlv \
+  "$TEMPLATE_ANALYSIS_DIR/07-scripting-and-parallelization/" \
+  "$ANALYSIS_DIR/07-scripting-and-parallelization/"
 
-# Comprueba que la carpeta existe, contiene los FASTQ y permite entrar en ella.
+# Comprueba que se ha localizado tu proyecto previo y sus datos.
 ls -ld "$DATA_DIR" "$DATA_DIR/RAW" "$ANALYSIS_DIR"
 ls -lh "$DATA_DIR/RAW"
 cd "$DATA_DIR" && pwd
 ```
 
-> Comprueba que aparecen los FASTQ en `RAW/` y que `pwd` muestra tu propio directorio antes de seguir. Se copia toda la plantilla, incluidos los datos preparados y los scripts de las prácticas. Si el docente actualiza un script durante la sesión, repite el `rsync`: actualizará los ficheros presentes en la plantilla, pero no elimina los resultados que hayas creado en carpetas que no existan en ella.
+> Comprueba que `DATA_DIR` corresponde a tu carpeta `FECHA_HPC-COURSE_${USER}`, que aparecen los FASTQ en `RAW/` y que `pwd` muestra esa ruta. Si el docente actualiza un script, repite el `rsync` de esta sección: actualiza los ficheros de la práctica 7 sin borrar los resultados que hayas generado.
 
 ## 1. Preparación de datos y scripts
 
 ### 1.1 Comprobación rápida de los datos
 
-La plantilla ya contiene los FASTQ en `RAW/`, una lista de cinco muestras en `ANALYSIS/samples_id.txt` y enlaces simbólicos homogéneos en `ANALYSIS/00-reads`. Así los scripts no dependen de si los datos originales se llaman `_1/_2` o `_R1/_R2`.
+De la práctica 5 ya dispones de una lista de cinco muestras en `ANALYSIS/samples_id.txt` y de enlaces simbólicos homogéneos en `ANALYSIS/00-reads`. Así los scripts no dependen de si los datos originales se llaman `_1/_2` o `_R1/_R2`.
 
 ```bash
 cat "$ANALYSIS_DIR/samples_id.txt"
 ls -l "$ANALYSIS_DIR/00-reads"
-find -L "$ANALYSIS_DIR/00-reads"
+find -L "$ANALYSIS_DIR/00-reads" -type l
 ```
 
 Debes ver cinco muestras: `ERR2261314`, `ERR2261315`, `ERR2261318`, `virus1` y `virus2`. El último comando no debe mostrar nada: cualquier salida indicaría un enlace roto y habría que avisar al docente.
