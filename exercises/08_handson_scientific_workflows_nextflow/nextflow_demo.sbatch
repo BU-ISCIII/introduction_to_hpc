@@ -15,16 +15,16 @@ module load Nextflow/24.04.2
 module load singularity/3.7.1
 
 export NXF_HOME="$PWD/.nextflow"
-export NXF_SINGULARITY_CACHEDIR="$PWD/.singularity"
-mkdir -p 01-nextflow-demo-results "$NXF_SINGULARITY_CACHEDIR"
+mkdir -p 01-nextflow-demo-results
+
+# Las imágenes se leen de la caché compartida definida en nextflow.config.
+# Debe haber sido precargada por el docente antes de la sesión.
+SHARED_SINGULARITY_CACHE='/data/courses/hpc_course/references/singularity-cache'
+
 # Ejecuta nf-core/demo (workflow preparado)
 # Importante: le indicamos que lea el archivo de configuración
 nextflow run nf-core/demo -r 1.0.2 \
   -profile test,singularity \
   -c nextflow.config \
-  -work-dir "$PWD/work" \
   --outdir 01-nextflow-demo-results \
-  -with-trace trace.txt \
-  -with-report report.html \
-  -with-timeline timeline.html \
   -resume
