@@ -386,8 +386,15 @@ El comando `ssh-keygen` genera una nueva clave pública/privada en el directorio
 - Descargamos los datos de la práctica en nuestro ordenador local. Bien en [zenodo](https://zenodo.org/records/17207071) o por línea de comandos:
 
 ```bash
-wget --content-disposition -P hpc_isciii_data https://zenodo.org/api/records/17207071/files-archive
-cd hpc_isciii_data
+mkdir -p hpc_isciii_data
+for file in ERR2261314_1.fastq.gz ERR2261314_2.fastq.gz \
+            ERR2261315_1.fastq.gz ERR2261315_2.fastq.gz \
+            ERR2261318_1.fastq.gz ERR2261318_2.fastq.gz \
+            virus1_R1.fastq.gz virus1_R2.fastq.gz \
+            virus2_R1.fastq.gz virus2_R2.fastq.gz; do
+    wget -c -O "hpc_isciii_data/$file" \
+        "https://zenodo.org/api/records/17207071/files/$file/content" || break
+done
 ```
 
 - Nos movemos a donde hemos descargado los datos:
