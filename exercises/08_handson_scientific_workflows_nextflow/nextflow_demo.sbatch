@@ -14,12 +14,7 @@ module purge
 module load Nextflow/24.04.2
 module load singularity/3.7.1
 
-export NXF_HOME="$PWD/.nextflow"
 mkdir -p 01-nextflow-demo-results
-
-# Las imágenes se leen de la caché compartida definida en nextflow.config.
-# Debe haber sido precargada por el docente antes de la sesión.
-SHARED_SINGULARITY_CACHE='/data/courses/hpc_course/references/singularity-cache'
 
 # Ejecuta nf-core/demo (workflow preparado)
 # Importante: le indicamos que lea el archivo de configuración

@@ -12,23 +12,21 @@
 
 set -euo pipefail
 
-module load RAxML/8.2.12-gompi-2020a-hybrid-avx2  # el módulo puede traer varios binarios
+module load RAxML/8.2.12-gompi-2020a-hybrid-avx2
 
-RUNNAME="ML_searches"
-mkdir -p 05-raxml_mpi-results
-RESULTS_DIR="$PWD/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
-mkdir -p "$RESULTS_DIR"
+# Cada ejecución usa su propio directorio, identificado con el ID de Slurm.
+mkdir -p "05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"
 
 # Pausa didáctica: permite observar la reserva multinodo con squeue.
 echo "[INFO] Recursos MPI reservados; RAxML comenzará en 60 segundos."
 sleep 60
 
-# Ejecuta RAxML con MPI
-mpirun -np "$SLURM_NTASKS" raxmlHPC-HYBRID-AVX2 \
-  -T "$SLURM_CPUS_PER_TASK" \
+# Ejecuta 8 procesos MPI; cada uno usa 2 hilos (igual que las directivas #SBATCH).
+mpirun -np 8 raxmlHPC-HYBRID-AVX2 \
+  -T 2 \
   -s data/raxml_demo.phy \
   -m GTRCAT \
   -p 12345 \
   -# 8 \
-  -n "$RUNNAME" \
-  -w "$RESULTS_DIR"
+  -n ML_searches \
+  -w "$PWD/05-raxml_mpi-results/raxml_${SLURM_JOB_ID}"

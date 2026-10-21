@@ -16,7 +16,7 @@ module load FastQC/0.11.9-Java-11
 echo "[INFO] Node: $(hostname)"
 echo "[INFO] Starting FastQC at $(date)"
 
-# Pausa didáctica: permite consultar el trabajo con squeue y scontrol.
+# Pausa didáctica: permite consultar el trabajo con squeue.
 echo "[INFO] Waiting 60 seconds before starting FastQC."
 sleep 60
 

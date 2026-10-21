@@ -20,6 +20,7 @@ module load singularity/3.7.1
 nextflow run nf-core/bacass -r dev \
   -profile test,singularity \
   -c "$PWD/bacass_portutatis.config" \
+  --assembler 'megahit' \
   --outdir "02-bacass-results" \
   -resume
 

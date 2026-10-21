@@ -26,35 +26,24 @@ export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
 export TEMPLATE_ANALYSIS_DIR="/data/courses/hpc_course/20261021_HPC-COURSE_profesor00/ANALYSIS"
 
-# Crea únicamente la carpeta de esta práctica y recibe sus scripts del docente.
+# Crea las carpetas de las prácticas 7 y 8 y recibe sus scripts del docente.
 mkdir -p "$ANALYSIS_DIR/07-scripting-and-parallelization/logs"
+mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
 rsync -rtlv \
   "$TEMPLATE_ANALYSIS_DIR/07-scripting-and-parallelization/" \
   "$ANALYSIS_DIR/07-scripting-and-parallelization/"
+rsync -rtlv \
+  "$TEMPLATE_ANALYSIS_DIR/08-scientific-workflows-nextflow/" \
+  "$ANALYSIS_DIR/08-scientific-workflows-nextflow/"
 
-# Comprueba que se ha localizado tu proyecto previo y sus datos.
-ls -ld "$DATA_DIR" "$DATA_DIR/RAW" "$ANALYSIS_DIR"
-ls -lh "$DATA_DIR/RAW"
-cd "$DATA_DIR" && pwd
+# Comprueba que están la carpeta y los scripts de la práctica 7.
+ls -ld "$ANALYSIS_DIR/07-scripting-and-parallelization"
+ls -1 "$ANALYSIS_DIR/07-scripting-and-parallelization/"*.sbatch
 ```
 
-> Comprueba que `DATA_DIR` corresponde a tu carpeta `FECHA_HPC-COURSE_${USER}`, que aparecen los FASTQ en `RAW/` y que `pwd` muestra esa ruta. Si el docente actualiza un script, repite el `rsync` de esta sección: actualiza los ficheros de la práctica 7 sin borrar los resultados que hayas generado.
+> Deben aparecer los siete archivos `.sbatch` de la práctica 7. Si el docente actualiza algún script, repite los dos `rsync`: actualizan los ficheros de las prácticas 7 y 8 sin borrar resultados.
 
-## 1. Preparación de datos y scripts
-
-### 1.1 Comprobación rápida de los datos
-
-De la práctica 5 ya dispones de una lista de cinco muestras en `ANALYSIS/samples_id.txt` y de enlaces simbólicos homogéneos en `ANALYSIS/00-reads`. Así los scripts no dependen de si los datos originales se llaman `_1/_2` o `_R1/_R2`.
-
-```bash
-cat "$ANALYSIS_DIR/samples_id.txt"
-ls -l "$ANALYSIS_DIR/00-reads"
-find -L "$ANALYSIS_DIR/00-reads" -type l
-```
-
-Debes ver cinco muestras: `ERR2261314`, `ERR2261315`, `ERR2261318`, `virus1` y `virus2`. El último comando no debe mostrar nada: cualquier salida indicaría un enlace roto y habría que avisar al docente.
-
-### 1.2 Sincronizar la práctica a `/scratch`
+## 1. Sincronizar la práctica a `/scratch`
 
 ```bash
 srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
@@ -66,21 +55,16 @@ pwd
 
 ## 2. Un trabajo correcto y dos diagnósticos
 
-Los tres scripts usan rutas relativas desde `07-scripting-and-parallelization`; por ello se envían con `--chdir` y no contienen rutas absolutas con comodines. Todos comienzan con `set -euo pipefail`, de modo que un comando que falla hace fallar el trabajo y Slurm registra un código de salida distinto de cero.
+Los scripts usan rutas relativas desde `07-scripting-and-parallelization`; envíalos siempre con `--chdir="$PWD"`. Todos incluyen `set -euo pipefail` después de las directivas `#SBATCH`.
 
-`set -euo pipefail` hace el script más estricto: detiene la ejecución si falla un comando (`-e`), si se usa una variable que no existe (`-u`) o si falla algún comando dentro de una tubería (`pipefail`). Debe aparecer después de las directivas `#SBATCH`.
+Hace que el script se detenga ante un comando fallido (`-e`), una variable inexistente (`-u`) o un error dentro de una tubería (`pipefail`).
 
-> **Idea clave:** sin esta línea, un script puede mostrar un error y continuar hasta terminar aparentemente bien; con ella, Slurm puede marcarlo como `FAILED` y el `ExitCode` de `sacct` sirve para diagnosticarlo.
+> **Idea clave:** un mensaje de error no basta para que Slurm marque el trabajo como fallido; el programa debe devolver un código distinto de cero. `set -e` solo puede detener el script cuando el comando ya devuelve ese error.
 
-### Qué comando usar según el estado del trabajo
+### Monitorización
 
-| Pregunta | Comando | Cuándo usarlo |
-| --- | --- | --- |
-| ¿Está el trabajo pendiente o ejecutándose? | `squeue --me` | Mientras el trabajo está en cola (`PD`) o en ejecución (`R`). Al terminar desaparece de esta lista. |
-| ¿Por qué está pendiente o qué recursos tiene asignados? | `scontrol show job <JOBID>` | Principalmente mientras está pendiente o ejecutándose. Muestra, entre otros datos, `Reason`, recursos solicitados y nodo asignado. |
-| ¿Cómo terminó y qué recursos utilizó? | `sacct -j <JOBID> ...` | Después de terminar. Muestra el historial: estado final, tiempo, memoria, CPU y `ExitCode`. Puede tardar unos segundos en aparecer. |
-
-> **Regla práctica:** `squeue` para el presente, `scontrol` para el detalle del presente y `sacct` para el resultado final. `squeue` no es un historial de trabajos.
+- `squeue --me`: trabajos que aún están en cola (`PD`) o ejecutándose (`R`).
+- `sacct -j <JOBID> ...`: resultado final, tiempo, memoria, CPU y `ExitCode`. Puede tardar unos segundos en aparecer tras terminar.
 
 ### Ejercicio 1 — FastQC correcto (`fastqc_demo.sbatch`)
 
@@ -100,12 +84,6 @@ En una segunda pestaña de MobaXterm, monitoriza el trabajo mientras está activ
 
 ```bash
 watch squeue --me
-```
-
-Consulta los detalles de la reserva mientras esté activo:
-
-```bash
-scontrol show job <JOBID> | grep -E 'JobName|Partition|NumCPUs|TRES|NodeList|Reason|TimeLimit'
 ```
 
 Cuando termine, consulta el historial y los logs:
@@ -188,7 +166,6 @@ En cambio, una solicitud que **sí puede satisfacerse** pero para la que todos l
 
 ```bash
 squeue --me
-scontrol show job <JOBID> | grep -E 'JobState|Reason|ReqTRES|NodeList'
 scancel <JOBID>
 sacct -j <JOBID> -o JobID,State,Elapsed,ExitCode
 ```
@@ -246,12 +223,6 @@ Monitoriza las dos tareas mientras esperan o se ejecutan. El script espera 60 se
 watch squeue --me
 ```
 
-Consulta el detalle de una tarea activa, por ejemplo la tarea 1:
-
-```bash
-scontrol show job <ARRAY_JOBID>_1 | grep -E 'JobState|JobName|Partition|NumCPUs|TRES|NodeList|Reason'
-```
-
 Cuando finalice el array, consulta el historial y los resultados:
 
 ```bash
@@ -290,6 +261,7 @@ Calcula el número de muestras:
 
 ```bash
 N_SAMPLES=$(wc -l < "$SCRATCH_DIR/ANALYSIS/samples_id.txt")
+echo "$N_SAMPLES"
 ```
 
 Envía el array:
@@ -304,17 +276,11 @@ Monitoriza las tareas mientras están activas:
 watch squeue --me
 ```
 
-Consulta el detalle de una tarea activa, por ejemplo la tarea 1:
-
-```bash
-scontrol show job <ARRAY_JOBID>_1 | grep -E 'JobState|JobName|Partition|NumCPUs|TRES|NodeList|Reason'
-```
-
 Cuando termine el array, consulta el historial y los resultados:
 
 ```bash
 sacct -j <ARRAY_JOBID> -o JobID,State,Elapsed,MaxRSS,ExitCode
-find 03-fastqc-array-results -maxdepth 2 -type f -name '*.html'
+tree 03-fastqc-array-results
 ```
 
 El script valida que exista un identificador y los dos FASTQ antes de ejecutar FastQC. Los logs de Slurm están en `logs/`; los resultados de cada tarea quedan en un directorio que incluye `ArrayJobID`, `TaskID` y nombre de muestra.
@@ -356,19 +322,17 @@ Monitoriza el trabajo mientras está activo:
 watch squeue --me
 ```
 
-Consulta el detalle de los recursos asignados mientras está activo:
-
-```bash
-scontrol show job <JOBID> | grep -E 'JobState|Partition|NumCPUs|TRES|NodeList|Reason'
-```
-
 Cuando termine, consulta el historial:
 
 ```bash
 sacct -j <JOBID> -o JobID,State,Elapsed,MaxRSS,AllocCPUS,TotalCPU,NodeList,ExitCode
 ```
 
-Cuando termine, revisa `04-openmp-spades-results/spades_sample01/`. Después, compara el resultado de `AllocCPUS`, `TotalCPU` y `MaxRSS` con los valores solicitados.
+Cuando termine, revisa `04-openmp-spades-results/spades_sample01/`.
+
+```bash
+ls -l 04-openmp-spades-results/spades_sample01/
+```
 
 Preguntas:
 
@@ -392,7 +356,7 @@ head -n 3 data/raxml_demo.phy
 
 El fichero está en formato **PHYLIP**, uno de los formatos que acepta RAxML. La primera línea indica `17 1998`: contiene 17 secuencias (taxones) y cada una tiene 1.998 posiciones. Cada línea posterior tiene un identificador, por ejemplo `LngfishAu`, seguido de su secuencia de nucleótidos. Todas las secuencias tienen la misma longitud y sus posiciones están alineadas: la posición 1 de una secuencia se compara con la posición 1 de todas las demás. Es el alineamiento de entrada a partir del cual RAxML busca árboles filogenéticos.
 
-`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona el binario híbrido `raxmlHPC-HYBRID-AVX2`: cada proceso MPI usa dos hilos compartiendo memoria, por lo que el script solicita `--cpus-per-task=2` y pasa ese mismo valor mediante `-T "$SLURM_CPUS_PER_TASK"`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
+`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona el binario híbrido `raxmlHPC-HYBRID-AVX2`: cada proceso MPI usa dos hilos compartiendo memoria. Por eso el script reserva `--cpus-per-task=2` y RAxML recibe `-T 2`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. `mpirun -np 8` inicia los ocho procesos MPI, igual que `--ntasks=8`. Estos números deben mantenerse coordinados con las directivas `#SBATCH`. `mpirun` es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos.
 
 RAxML ejecuta ocho búsquedas independientes (`-# 8`) y conserva el árbol con mejor puntuación en `RAxML_bestTree.ML_searches`. El objetivo del ejercicio es observar cómo se reparten los procesos MPI, no interpretar ese árbol. Con este input el cálculo termina muy rápido; por ello, el script espera deliberadamente 60 segundos antes de lanzar RAxML. No es parte del análisis: permite abrir antes otra terminal de MobaXterm con `watch squeue --me` y observar la reserva de los dos nodos.
 
@@ -408,12 +372,6 @@ Monitoriza la reserva de los dos nodos mientras está activa:
 
 ```bash
 watch squeue --me
-```
-
-Consulta el detalle de la reserva mientras está activa:
-
-```bash
-scontrol show job <JOBID> | grep -E 'JobState|Partition|NumNodes|NumCPUs|TRES|NodeList|Reason'
 ```
 
 Cuando termine, consulta el historial:
