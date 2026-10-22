@@ -1,5 +1,7 @@
 # Curso Práctico de Iniciación al uso del Entorno de Alta Computación
 
+CAMBIAR A USAR NODO DE COMPUTO PARA INSTALAR CON MICROMAMBA PORQUE SE LLENA LA RAM DEL NODO DE ACCESO
+
 ## Práctica 6: Gestión de Software en HPC
 
 Bienvenido a la sesión práctica sobre la gestión de software en nuestro HPC. Hoy cubriremos tres temas principales:
