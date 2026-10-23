@@ -12,6 +12,10 @@ set -euo pipefail
 
 module load FastQC/0.11.9-Java-11
 
+# Pausa didáctica: permite observar las tareas 1 y 2 del array en squeue.
+echo "[INFO] JobID=${SLURM_JOBID}; Task=${SLURM_ARRAY_TASK_ID}; waiting 60 seconds."
+sleep 60
+
 mkdir -p 02-array-demo-results
 OUTDIR="02-array-demo-results/demo_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
 mkdir -p "$OUTDIR"

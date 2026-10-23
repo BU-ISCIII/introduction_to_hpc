@@ -15,80 +15,35 @@ En esta práctica enviarás scripts al planificador Slurm, diagnosticarás un tr
 - Anota el identificador que devuelve `sbatch`. Los identificadores cambian en cada envío.
 - Sustituye `<JOBID>` por el identificador real, sin los signos `<` y `>`.
 
-Define las rutas una vez por terminal. El nombre de carpeta corresponde a esta edición del curso:
+Las prácticas 4 y 5 ya crearon tu directorio de curso, con el formato `FECHA_HPC-COURSE_${USER}`, los FASTQ en `RAW/` y los enlaces de `ANALYSIS/00-reads`. No crees otro directorio ni vuelvas a copiar los FASTQ. Define las rutas de ese proyecto existente una vez por terminal:
 
 ```bash
-export COURSE_NAME="20261015_HPC-COURSE_${USER}"
+# Escribe la fecha que aparece en el nombre de tu carpeta creada en la práctica 4.
+# Para esta edición del curso es 20261021.
+export COURSE_NAME="20261021_HPC-COURSE_${USER}"
 export DATA_DIR="/data/courses/hpc_course/${COURSE_NAME}"
 export SCRATCH_DIR="/scratch/hpc_course/${COURSE_NAME}"
 export ANALYSIS_DIR="${DATA_DIR}/ANALYSIS"
+export TEMPLATE_ANALYSIS_DIR="/data/courses/hpc_course/20261021_HPC-COURSE_profesor00/ANALYSIS"
 
-ls -ld "$DATA_DIR" "$DATA_DIR/RAW" "$ANALYSIS_DIR"
-```
-
-Comprueba también los recursos reales antes del ejercicio de memoria y los módulos antes de comenzar. Si alguno de estos módulos no aparece, avisa al docente: las versiones de los scripts son parte del material que se debe validar en Portutatis.
-
-```bash
-sinfo -N -h -o '%N  %P  %c CPUs  %m MB'
-module spider FastQC
-module spider SPAdes
-module spider RAxML
-```
-
-## 1. Preparación de datos y scripts
-
-### 1.1 Crear la zona de trabajo en `/data`
-
-Los FASTQ de esta edición ya están en `RAW/`. Vamos a generar una lista de muestras y enlaces simbólicos homogéneos en `ANALYSIS/00-reads`. Así los scripts no dependen de si los datos originales se llaman `_1/_2` o `_R1/_R2`.
-
-```bash
+# Crea las carpetas de las prácticas 7 y 8 y recibe sus scripts del docente.
 mkdir -p "$ANALYSIS_DIR/07-scripting-and-parallelization/logs"
-mkdir -p "$ANALYSIS_DIR/00-reads"
-cd "$ANALYSIS_DIR"
+mkdir -p "$ANALYSIS_DIR/08-scientific-workflows-nextflow/logs"
+rsync -rtlv \
+  "$TEMPLATE_ANALYSIS_DIR/07-scripting-and-parallelization/" \
+  "$ANALYSIS_DIR/07-scripting-and-parallelization/"
+rsync -rtlv \
+  "$TEMPLATE_ANALYSIS_DIR/08-scientific-workflows-nextflow/" \
+  "$ANALYSIS_DIR/08-scientific-workflows-nextflow/"
 
-{
-  find ../RAW -maxdepth 1 -type f -name '*_1.fastq.gz' -printf '%f\n' | sed 's/_1\.fastq\.gz$//'
-  find ../RAW -maxdepth 1 -type f -name '*_R1.fastq.gz' -printf '%f\n' | sed 's/_R1\.fastq\.gz$//'
-} | sort -u > samples_id.txt
-
-cat samples_id.txt
+# Comprueba que están la carpeta y los scripts de la práctica 7.
+ls -ld "$ANALYSIS_DIR/07-scripting-and-parallelization"
+ls -1 "$ANALYSIS_DIR/07-scripting-and-parallelization/"*.sbatch
 ```
 
-Ahora crea los enlaces. El bucle detecta los dos esquemas de nombres presentes en `RAW/`.
+> Deben aparecer los siete archivos `.sbatch` de la práctica 7. Si el docente actualiza algún script, repite los dos `rsync`: actualizan los ficheros de las prácticas 7 y 8 sin borrar resultados.
 
-```bash
-cd "$ANALYSIS_DIR/00-reads"
-while read -r sample; do
-  if [[ -f "../../RAW/${sample}_1.fastq.gz" ]]; then
-    ln -sfn "../../RAW/${sample}_1.fastq.gz" "${sample}_R1.fastq.gz"
-    ln -sfn "../../RAW/${sample}_2.fastq.gz" "${sample}_R2.fastq.gz"
-  else
-    ln -sfn "../../RAW/${sample}_R1.fastq.gz" "${sample}_R1.fastq.gz"
-    ln -sfn "../../RAW/${sample}_R2.fastq.gz" "${sample}_R2.fastq.gz"
-  fi
-done < ../samples_id.txt
-
-ls -l
-```
-
-> Debes ver cinco muestras: `ERR2261314`, `ERR2261315`, `ERR2261318`, `virus1` y `virus2`. Comprueba que los enlaces no están rotos con `find -L . -type l` (no debe mostrar nada).
-
-### 1.2 Descargar los scripts y copiar a `/scratch`
-
-Sitúate en el directorio de la práctica y descarga los esqueletos. Si GitHub no estuviese accesible desde el clúster, el docente facilitará esos mismos ficheros por otra vía.
-
-```bash
-cd "$ANALYSIS_DIR/07-scripting-and-parallelization"
-BASE_URL='https://raw.githubusercontent.com/BU-ISCIII/introduction_to_hpc/main/exercises/07_handson_scripting_and_parallelization'
-
-for file in fastqc_demo.sbatch fastqc_failcmd.sbatch fastqc_overask.sbatch \
-            array_demo.sbatch fastqc_array_samplesid.sbatch \
-            spades_openmp.sbatch raxml_mpi.sbatch raxml_demo.phy; do
-  wget -O "$file" "$BASE_URL/$file"
-done
-```
-
-Sincroniza el directorio completo al espacio temporal. Se hace con `srun` porque `/scratch` no admite escritura directa desde el nodo de acceso.
+## 1. Sincronizar la práctica a `/scratch`
 
 ```bash
 srun --partition=short_idx --cpus-per-task=1 --mem=1G --time=00:10:00 \
@@ -100,32 +55,40 @@ pwd
 
 ## 2. Un trabajo correcto y dos diagnósticos
 
-Los tres scripts usan rutas relativas desde `07-scripting-and-parallelization`; por ello se envían con `--chdir` y no contienen rutas absolutas con comodines. Todos comienzan con `set -euo pipefail`, de modo que un comando que falla hace fallar el trabajo y Slurm registra un código de salida distinto de cero.
+Los scripts usan rutas relativas desde `07-scripting-and-parallelization`; envíalos siempre con `--chdir="$PWD"`. Todos incluyen `set -euo pipefail` después de las directivas `#SBATCH`.
 
-`set -euo pipefail` hace el script más estricto: detiene la ejecución si falla un comando (`-e`), si se usa una variable que no existe (`-u`) o si falla algún comando dentro de una tubería (`pipefail`). Debe aparecer después de las directivas `#SBATCH`.
+Hace que el script se detenga ante un comando fallido (`-e`), una variable inexistente (`-u`) o un error dentro de una tubería (`pipefail`).
 
-> **Idea clave:** sin esta línea, un script puede mostrar un error y continuar hasta terminar aparentemente bien; con ella, Slurm puede marcarlo como `FAILED` y el `ExitCode` de `sacct` sirve para diagnosticarlo.
+> **Idea clave:** un mensaje de error no basta para que Slurm marque el trabajo como fallido; el programa debe devolver un código distinto de cero. `set -e` solo puede detener el script cuando el comando ya devuelve ese error.
 
-### Ejercicio 1 — FastQC correcto
+### Monitorización
 
-Revisa primero el script. Antes de enviarlo, abre una **segunda pestaña de MobaXterm** conectada al HPC y deja este comando ejecutándose. Se actualizará cada segundo; termina con `Ctrl+C` cuando el trabajo desaparezca de la cola.
+- `squeue --me`: trabajos que aún están en cola (`PD`) o ejecutándose (`R`).
+- `sacct -j <JOBID> ...`: resultado final, tiempo, memoria, CPU y `ExitCode`. Puede tardar unos segundos en aparecer tras terminar.
 
+### Ejercicio 1 — FastQC correcto (`fastqc_demo.sbatch`)
+
+Explora el script:
 ```bash
-watch -n 1 'squeue --me'
+more fastqc_demo.sbatch
 ```
 
-En la primera pestaña, envía el trabajo:
+El script reserva cuatro CPU con `--cpus-per-task=4` y pasa exactamente ese valor a FastQC mediante `-t "$SLURM_CPUS_PER_TASK"`. Solicitar CPU a Slurm no paraleliza por sí solo el programa: el parámetro `-t` es el que comunica a FastQC cuántos hilos puede utilizar.
 
+Ejecuta el trabajo:
 ```bash
-less fastqc_demo.sbatch
 sbatch --chdir="$PWD" fastqc_demo.sbatch
 ```
 
-Mientras está activo y al terminar, consulta:
+En una segunda pestaña de MobaXterm, monitoriza el trabajo mientras está activo. Se actualizará cada segundo; termina con `Ctrl+C` cuando el trabajo desaparezca de la cola:
 
 ```bash
-squeue --me
-scontrol show job <JOBID> | grep -E 'JobName|Partition|NumCPUs|TRES|NodeList|Reason|TimeLimit'
+watch squeue --me
+```
+
+Cuando termine, consulta el historial y los logs:
+
+```bash
 sacct -j <JOBID> -o JobID,JobName,State,Elapsed,MaxRSS,AllocCPUS,TotalCPU,ExitCode
 less "logs/fastqc_demo-<JOBID>.out"
 less "logs/fastqc_demo-<JOBID>.err"
@@ -138,13 +101,31 @@ Preguntas:
 2. ¿Qué estado y `ExitCode` tiene el trabajo?
 3. ¿Cuánto tardó y qué `MaxRSS` alcanzó?
 
-### Ejercicio 2 — Fallo por una entrada inexistente
+### Ejercicio 2 — Entrada inexistente (`fastqc_failcmd.sbatch`)
+
+Explora el script:
+
+```bash
+more fastqc_failcmd.sbatch
+```
 
 `fastqc_failcmd.sbatch` referencia deliberadamente un FASTQ inexistente (`does_not_exist_R1.fastq.gz`). No cambies el script antes de enviarlo.
 
+Ejecuta el trabajo:
+
 ```bash
-less fastqc_failcmd.sbatch
 sbatch --chdir="$PWD" fastqc_failcmd.sbatch
+```
+
+El trabajo es muy corto, pero puedes intentar observarlo mientras está activo:
+
+```bash
+watch squeue --me
+```
+
+Cuando termine, consulta el historial y el error:
+
+```bash
 sacct -j <JOBID> -o JobID,State,Elapsed,ExitCode
 tail -n 20 "logs/fastqc_fail-<JOBID>.err"
 ```
@@ -156,9 +137,17 @@ Preguntas:
 3. Aunque el script use `set -euo pipefail`, ¿por qué Bash no puede detenerlo por este aviso? Pista: `set -e` sólo actúa si el comando devuelve un código distinto de cero.
 4. ¿Cuál sería el cambio mínimo para corregir la ruta de entrada?
 
-### Ejercicio 3 — Solicitud de memoria imposible
+### Ejercicio 3 — Solicitud de memoria imposible (`fastqc_overask.sbatch`)
+
+Explora el script:
+
+```bash
+more fastqc_overask.sbatch
+```
 
 El script `fastqc_overask.sbatch` pide `2T` de RAM. En Portutatis, el nodo con más memoria tiene `2.031.000 MB` (aproximadamente 1,94 TiB), por lo que esta solicitud supera la capacidad de cualquier nodo. En una futura edición del curso, comprueba el máximo con `sinfo` y ajusta `--mem` si cambia el hardware.
+
+Intenta enviarlo:
 
 ```bash
 sbatch --chdir="$PWD" fastqc_overask.sbatch
@@ -173,6 +162,16 @@ sbatch: error: Batch job submission failed: Requested node configuration is not 
 
 No habrá `JOBID`, no aparecerá nada en `squeue` y no hay que usar `scancel`: el trabajo nunca ha entrado en la cola.
 
+En cambio, una solicitud que **sí puede satisfacerse** pero para la que todos los nodos adecuados están ocupados quedará en estado `PD` con un `Reason` como `Resources`. En ese caso sí existe un `JOBID` y se puede inspeccionar y cancelar si se envió por error:
+
+```bash
+squeue --me
+scancel <JOBID>
+sacct -j <JOBID> -o JobID,State,Elapsed,ExitCode
+```
+
+Tras `scancel`, el trabajo desaparece de `squeue` y normalmente queda registrado como `CANCELLED` en `sacct`. No ejecutes `scancel` sobre trabajos de otros usuarios.
+
 Preguntas:
 
 1. ¿Qué recurso solicitado no puede satisfacer el clúster?
@@ -183,15 +182,17 @@ Preguntas:
 
 Un *job array* envía muchas tareas con el mismo script. Cada tarea tiene el mismo `SLURM_ARRAY_JOB_ID` y un `SLURM_ARRAY_TASK_ID` distinto. El patrón `%A_%a` en los logs evita que se mezclen sus salidas.
 
-### Ejercicio 1 — Dos muestras con índices consecutivos
+### Ejercicio 1 — Dos muestras con índices consecutivos (`array_demo.sbatch`)
+
+Explora primero el script:
+
+```bash
+more array_demo.sbatch
+```
 
 Un *job array* no es un único trabajo que recorre muestras con un bucle. Al enviar un array, Slurm crea varias **tareas independientes** a partir del mismo script. Cada tarea puede empezar, esperar o terminar en un momento distinto, pero todas comparten la misma configuración de recursos.
 
-En este ejemplo, `array_demo.sbatch` procesa `virus1` y `virus2`. Antes de enviarlo, explora el script:
-
-```bash
-less array_demo.sbatch
-```
+En este ejemplo, `array_demo.sbatch` procesa `virus1` y `virus2`.
 
 Identifica estas líneas:
 
@@ -210,9 +211,21 @@ Por tanto, una misma plantilla produce esta correspondencia:
 | 1 | `1` | `virus1_R1.fastq.gz` y `virus1_R2.fastq.gz` |
 | 2 | `2` | `virus2_R1.fastq.gz` y `virus2_R2.fastq.gz` |
 
+Envía el array:
+
 ```bash
 sbatch --chdir="$PWD" array_demo.sbatch
-squeue --me
+```
+
+Monitoriza las dos tareas mientras esperan o se ejecutan. El script espera 60 segundos antes de iniciar FastQC, para que dé tiempo a observarlas:
+
+```bash
+watch squeue --me
+```
+
+Cuando finalice el array, consulta el historial y los resultados:
+
+```bash
 sacct -j <ARRAY_JOBID> -o JobID,JobName%20,State,Elapsed,MaxRSS,ExitCode
 find 02-array-demo-results -maxdepth 2 -type f -name '*.html'
 ```
@@ -225,16 +238,49 @@ Preguntas:
 2. ¿Qué archivos de log corresponden a cada tarea?
 3. ¿Cuál fue el `MaxRSS` de cada tarea?
 
-### Ejercicio 2 — Array a partir de `samples_id.txt`
+### Ejercicio 2 — Array a partir de `samples_id.txt` (`fastqc_array_samplesid.sbatch`)
 
-Este array obtiene la muestra de la línea que corresponde a su índice. El rango se calcula desde el fichero para que no haya que modificar el script cuando cambie la lista. Limita a dos tareas simultáneas: es una buena práctica cuando el conjunto puede crecer.
+Explora el script:
+
+```bash
+more fastqc_array_samplesid.sbatch
+```
+
+Este array obtiene la muestra de la línea que corresponde a su índice. El rango se calcula desde el fichero para que no haya que modificar el script cuando cambie la lista. Todas las tareas del array se envían sin limitar su concurrencia.
+
+En el script, la asignación siguiente realiza el emparejamiento entre tarea y muestra:
+
+```bash
+# NO EJECUTAR!!
+SAMPLE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$IDS_FILE")
+```
+
+`$(...)` guarda en `SAMPLE` la salida del comando interno. `sed -n` no imprime las líneas por defecto y la orden `p` imprime solo la línea indicada: para la tarea 1, la expresión se convierte en `1p` y se lee la primera línea de `samples_id.txt`; para la tarea 2, `2p` y la segunda. Por tanto, cada tarea recibe un identificador de muestra distinto sin que haya un bucle que lance FastQC manualmente.
+
+Calcula el número de muestras:
 
 ```bash
 N_SAMPLES=$(wc -l < "$SCRATCH_DIR/ANALYSIS/samples_id.txt")
-sbatch --chdir="$PWD" --array="1-${N_SAMPLES}%2" fastqc_array_samplesid.sbatch
+echo "$N_SAMPLES"
+```
 
+Envía el array:
+
+```bash
+sbatch --chdir="$PWD" --array="1-${N_SAMPLES}" fastqc_array_samplesid.sbatch
+```
+
+Monitoriza las tareas mientras están activas:
+
+```bash
+watch squeue --me
+```
+
+Cuando termine el array, consulta el historial y los resultados:
+
+```bash
 sacct -j <ARRAY_JOBID> -o JobID,State,Elapsed,MaxRSS,ExitCode
-find 03-fastqc-array-results -maxdepth 2 -type f -name '*.html'
+tree 03-fastqc-array-results
 ```
 
 El script valida que exista un identificador y los dos FASTQ antes de ejecutar FastQC. Los logs de Slurm están en `logs/`; los resultados de cada tarea quedan en un directorio que incluye `ArrayJobID`, `TaskID` y nombre de muestra.
@@ -242,7 +288,7 @@ El script valida que exista un identificador y los dos FASTQ antes de ejecutar F
 Preguntas:
 
 1. ¿Por qué el rango se calcula con `wc -l` y no se escribe a mano?
-2. ¿Qué efecto tiene `%2`?
+2. ¿Cuántas tareas se enviarán si `samples_id.txt` contiene cinco muestras?
 3. ¿Cómo reenviarías únicamente la tarea 3 si hubiese fallado?
 
 ## 4. OpenMP frente a MPI
@@ -254,17 +300,39 @@ Preguntas:
 
 Pedir recursos no paraleliza un programa por sí solo: hay que comunicar el número de hilos o procesos al ejecutable.
 
-### Ejercicio 1 — OpenMP con SPAdes
+### Ejercicio 1 — OpenMP con SPAdes (`spades_openmp.sbatch`)
+
+Explora el script:
+
+```bash
+more spades_openmp.sbatch
+```
 
 El script solicita 16 CPU para un único proceso y pasa ese valor a `spades.py` mediante `--threads "$SLURM_CPUS_PER_TASK"`.
 
+Envía el trabajo:
+
 ```bash
 sbatch --chdir="$PWD" spades_openmp.sbatch
-squeue --me
+```
+
+Monitoriza el trabajo mientras está activo:
+
+```bash
+watch squeue --me
+```
+
+Cuando termine, consulta el historial:
+
+```bash
 sacct -j <JOBID> -o JobID,State,Elapsed,MaxRSS,AllocCPUS,TotalCPU,NodeList,ExitCode
 ```
 
-Cuando termine, revisa `04-openmp-spades-results/spades_sample01/`. Después, compara el resultado de `AllocCPUS`, `TotalCPU` y `MaxRSS` con los valores solicitados.
+Cuando termine, revisa `04-openmp-spades-results/spades_sample01/`.
+
+```bash
+ls -l 04-openmp-spades-results/spades_sample01/
+```
 
 Preguntas:
 
@@ -272,21 +340,43 @@ Preguntas:
 2. ¿Qué parámetro de SPAdes recibe el número de CPU que concede Slurm?
 3. ¿Qué inconveniente tendría pedir 32 CPU y 64 GB si el análisis no los utiliza?
 
-### Ejercicio 2 — MPI con RAxML
+### Ejercicio 2 — MPI con RAxML (`raxml_mpi.sbatch`)
 
-El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. El archivo `raxml_demo.phy` es un alineamiento sintético, fijo y versionado con la práctica; no debe interpretarse biológicamente. Ya se copió al directorio de trabajo al sincronizar la práctica. Compruébalo:
+Explora el script:
 
 ```bash
-head -n 3 raxml_demo.phy
+more raxml_mpi.sbatch
 ```
 
-`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona un binario híbrido (`raxmlHPC-HYBRID-*`): cada proceso MPI usa dos hilos compartiendo memoria, por lo que el script solicita `--cpus-per-task=2` y pasa ese mismo valor mediante `-T "$SLURM_CPUS_PER_TASK"`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. El script busca explícitamente un binario MPI o híbrido y falla de forma clara si el módulo no proporciona ninguno; nunca sustituye silenciosamente ese binario por el serial `raxmlHPC`. Se usa `mpirun -np "$SLURM_NTASKS"` porque es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos mediante las directivas `#SBATCH`.
+El ejemplo es deliberadamente pequeño: su propósito es observar la distribución de procesos, no medir rendimiento. El archivo `data/raxml_demo.phy` es un alineamiento de ADN de ejemplo procedente de IQ-TREE, fijo y versionado con la práctica. Ya se copió al directorio de trabajo al sincronizar la práctica. Compruébalo:
 
-RAxML ejecuta ocho búsquedas independientes (`-# 8`) con CAT y compara después los árboles candidatos bajo GAMMA. El resultado final es `RAxML_bestTree.ML_searches`. Con este input el cálculo termina muy rápido; por ello, el script espera deliberadamente 20 segundos antes de lanzar RAxML. No es parte del análisis: permite abrir antes otra terminal de MobaXterm con `watch -n 1 'squeue --me'` y observar la reserva de los dos nodos.
+```bash
+head -n 3 data/raxml_demo.phy
+```
+
+El fichero está en formato **PHYLIP**, uno de los formatos que acepta RAxML. La primera línea indica `17 1998`: contiene 17 secuencias (taxones) y cada una tiene 1.998 posiciones. Cada línea posterior tiene un identificador, por ejemplo `LngfishAu`, seguido de su secuencia de nucleótidos. Todas las secuencias tienen la misma longitud y sus posiciones están alineadas: la posición 1 de una secuencia se compara con la posición 1 de todas las demás. Es el alineamiento de entrada a partir del cual RAxML busca árboles filogenéticos.
+
+`raxml_mpi.sbatch` solicita dos nodos con cuatro procesos MPI en cada uno. El módulo disponible proporciona el binario híbrido `raxmlHPC-HYBRID-AVX2`: cada proceso MPI usa dos hilos compartiendo memoria. Por eso el script reserva `--cpus-per-task=2` y RAxML recibe `-T 2`. En total reserva 2 nodos × 4 procesos MPI × 2 CPU = 16 CPU. `mpirun -np 8` inicia los ocho procesos MPI, igual que `--ntasks=8`. Estos números deben mantenerse coordinados con las directivas `#SBATCH`. `mpirun` es el lanzador de OpenMPI incluido en el módulo `gompi`; Slurm ya ha reservado y asignado los nodos.
+
+RAxML ejecuta ocho búsquedas independientes (`-# 8`) y conserva el árbol con mejor puntuación en `RAxML_bestTree.ML_searches`. El objetivo del ejercicio es observar cómo se reparten los procesos MPI, no interpretar ese árbol. Con este input el cálculo termina muy rápido; por ello, el script espera deliberadamente 60 segundos antes de lanzar RAxML. No es parte del análisis: permite abrir antes otra terminal de MobaXterm con `watch squeue --me` y observar la reserva de los dos nodos.
+
+> **Nota técnica opcional:** `-m GTRCAT` es el modelo indicado en el script. CAT es una aproximación rápida para tener en cuenta que las posiciones de un alineamiento no evolucionan todas a la misma velocidad. Al finalizar, RAxML puede mostrar en el log una evaluación más exhaustiva bajo GAMMA. No es necesario conocer esos modelos para comprender la paralelización MPI.
+
+Envía el trabajo:
 
 ```bash
 sbatch --chdir="$PWD" raxml_mpi.sbatch
-squeue --me
+```
+
+Monitoriza la reserva de los dos nodos mientras está activa:
+
+```bash
+watch squeue --me
+```
+
+Cuando termine, consulta el historial:
+
+```bash
 sacct -j <JOBID> -o JobID,JobName%20,State,Elapsed,AllocCPUS,NodeList,ExitCode
 ```
 

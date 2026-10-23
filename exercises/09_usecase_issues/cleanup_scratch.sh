@@ -6,7 +6,9 @@
   DAYS=2
   MODE="temps"      # temps|stale
   FORCE=0
+  DEBUG=0
   KEEP_PATTERNS=()   # Only applies to 'stale' (name patterns to keep)
+  STALE_MAXDEPTH=4    # Recursive activity scan depth (project root is depth 0)
 
   # Slurm: default configuration (overridable via environment variables)
   SRUN_PART="${SRUN_PART:-short_idx}"
@@ -35,8 +37,10 @@ Usage: $(basename "$0") [options]
 
   -m, --mode   Cleanup mode: temps (default) or stale
   -d, --days   Age in days (stale mode only; default 2). With 0, no age filter
+  -x, --maxdepth  Recursive activity scan depth (stale mode only; default 4)
   -b, --base   Base directory (default: /scratch/hpc_course)
   -k, --keep   Name pattern to keep (repeatable; stale mode only)
+      --debug  Show one recent path for each project excluded from stale results
   -f, --force  Perform deletion (default: dry-run)
   -h, --help   Show this help
 
@@ -44,8 +48,14 @@ Examples:
   # Old temporaries (dry-run)
   cleanup_scratch.sh -m temps -d 3
 
-  # Top-level folders not modified in >2 days (dry-run)
+  # Top-level folders with no recent activity down to depth 4 (dry-run)
   cleanup_scratch.sh -m stale
+
+  # Check recent activity down to depth 6
+  cleanup_scratch.sh -m stale --maxdepth 6
+
+  # Explain why projects are considered active
+  cleanup_scratch.sh -m stale --debug
 
   # Actually delete, keeping folders matching "refs" or "important*"
   cleanup_scratch.sh -m stale -f -k refs -k 'important*'
@@ -65,8 +75,10 @@ EOF
     case "$1" in
       -m|--mode) MODE="$2"; shift 2 ;;
       -d|--days) DAYS="$2"; shift 2 ;;
+      -x|--maxdepth) STALE_MAXDEPTH="$2"; shift 2 ;;
       -b|--base) BASE="$2"; shift 2 ;;
       -k|--keep) KEEP_PATTERNS+=("$2"); shift 2 ;;
+      --debug) DEBUG=1; shift ;;
       -f|--force) FORCE=1; shift ;;
       -h|--help) usage; exit 0 ;;
       *) echo "Unrecognized option: $1"; usage; exit 1 ;;
@@ -76,6 +88,11 @@ EOF
   # Safety: require BASE under /scratch
   if [[ "$BASE" != /scratch/* ]]; then
     echo "ERROR: BASE must be under /scratch (current: $BASE)" >&2
+    exit 1
+  fi
+
+  if [[ ! "$STALE_MAXDEPTH" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: --maxdepth must be a non-negative integer (current: $STALE_MAXDEPTH)" >&2
     exit 1
   fi
 
@@ -207,22 +224,53 @@ if [[ "$MODE" == "temps" ]]; then
     fi
 
 elif [[ "$MODE" == "stale" ]]; then
-  MTIME_EXPR=()
   if [[ ${DAYS} -gt 0 ]]; then
-    MTIME_EXPR=( -mtime +"$DAYS" )
-    AGE_DESC="older than ${DAYS} days"
+    AGE_DESC="with no activity in the last ${DAYS} days"
   else
     AGE_DESC="without age filter"
   fi
 
-  echo "${CYAN}[srun:${SRUN_PART}]${RESET} Searching top-level folders ${AGE_DESC} in ${BASE} (excluding .Trash-*, lost+found, .snapshot(s))"
+  echo "${CYAN}[srun:${SRUN_PART}]${RESET} Searching top-level folders ${AGE_DESC} in ${BASE} (activity scan maxdepth ${STALE_MAXDEPTH}; excluding work/work_*, .Trash-*, lost+found, .snapshot(s))"
     # Collect top-level candidates (listing on compute node)
-    mapfile -t CANDIDATES < <(
-      srun "${SRUN_ARGS[@]}" \
-        find "$BASE" -mindepth 1 -maxdepth 1 \
-          \( -name 'lost+found' -o -name '.snapshot' -o -name '.snapshots' -o -name '.Trash-*' \) -prune -o \
-          -type d ${MTIME_EXPR[@]:-} -print | sort
-    )
+    if [[ ${DAYS} -gt 0 ]]; then
+      mapfile -t CANDIDATES < <(
+        srun "${SRUN_ARGS[@]}" bash -s -- "$BASE" "$DAYS" "$STALE_MAXDEPTH" "$DEBUG" <<'EOF'
+set -euo pipefail
+
+base=$1
+days=$2
+maxdepth=$3
+debug=$4
+
+find "$base" -mindepth 1 -maxdepth 1 \
+  \( -name 'lost+found' -o -name '.snapshot' -o -name '.snapshots' -o -name '.Trash-*' \) -prune -o \
+  -type d -print0 |
+while IFS= read -r -d '' project; do
+  # A project is stale only when neither its root nor any inspected entry is
+  # recent. Work directories are pruned because their transient files should
+  # not keep an otherwise inactive project alive.
+  recent_path=$(find "$project" -maxdepth "$maxdepth" \
+      \( -type d \( -name 'work' -o -name 'work_*' \) -prune \) -o \
+      -newermt "$days days ago" -print -quit 2>/dev/null || true)
+
+  if [[ -z "$recent_path" ]]; then
+    printf '%s\n' "$project"
+  elif (( debug )); then
+    printf '[debug] ACTIVE: %s\n' "$project" >&2
+    stat -c '        recent: %y | %F | %n' -- "$recent_path" >&2 || \
+      printf '        recent: %s\n' "$recent_path" >&2
+  fi
+done | sort
+EOF
+      )
+    else
+      mapfile -t CANDIDATES < <(
+        srun "${SRUN_ARGS[@]}" \
+          find "$BASE" -mindepth 1 -maxdepth 1 \
+            \( -name 'lost+found' -o -name '.snapshot' -o -name '.snapshots' -o -name '.Trash-*' \) -prune -o \
+            -type d -print | sort
+      )
+    fi
 
     # Filter by name patterns to keep
     TO_DELETE=()

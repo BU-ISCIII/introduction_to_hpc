@@ -365,8 +365,8 @@ Scripts y alias propuestos (guardar en `~/bin` o añadir a `~/.bashrc`):
   - Siempre lanza el script desde el NODO DE ACCESO.
 
   Ejemplos:
-  - `hpc_cp.sh "scratch->data" 20250929_HPC-COURSE_profesor00/` copia `/scratch/hpc_course/20250929_HPC-COURSE_profesor00/` a `/data/courses/hpc_course/20250929_HPC-COURSE_profesor00/`.
-  - `hpc_cp.sh "data->scratch" 20250929_HPC-COURSE_profesor00/ --dry-run` simula copiar `/data/courses/hpc_course/20250929_HPC-COURSE_profesor00/` a `/scratch/hpc_course/20250929_HPC-COURSE_profesor00/`.
+  - `hpc_cp.sh "scratch->data" 20261021_HPC-COURSE_${USER}/` copia `/scratch/hpc_course/20261021_HPC-COURSE_${USER}/` a `/data/courses/hpc_course/20261021_HPC-COURSE_${USER}/`.
+  - `hpc_cp.sh "data->scratch" 20261021_HPC-COURSE_${USER}/ --dry-run` simula copiar `/data/courses/hpc_course/20261021_HPC-COURSE_${USER}/` a `/scratch/hpc_course/20261021_HPC-COURSE_${USER}/`.
 
 - Alias para colas: `sq` (squeue) y `si` (sinfo)
 
