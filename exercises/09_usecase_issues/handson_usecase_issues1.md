@@ -797,9 +797,10 @@ cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/fastq/*_%_1.fastq.gz %_
 cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/fastq/*_%_2.fastq.gz %_R2.fastq.gz" | bash
 ```
 
-1. Crear un script de sbatch para ejecutar fastp en la carpeta 01-fastp. Utiliza la imagen de singularity que te descargaste en la pŕactica 6.
+1. Crear un script de sbatch para ejecutar fastp en la carpeta 01-fastp. Descarga la imagen de singularity utilizando galaxy.depot o seqera containers como aprendimos en la práctica de software management.
 
 2. Comprobaciones y resultados
 
-- Monitoriza los jobs: `squeue --me -o "%.18i %.40j %.2t %.10M %R"`
+- Monitoriza los jobs: `sq -u $USER`
+
 - Revisa logs.
