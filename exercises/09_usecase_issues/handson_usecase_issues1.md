@@ -15,8 +15,8 @@ BU-ISCIII
       - [5. Problemas de espacio](#5-problemas-de-espacio)
       - [6. Permisos de las distintas particiones](#6-permisos-de-las-distintas-particiones)
       - [7. Gestión de ficheros](#7-gestión-de-ficheros)
-      - [8. Lanzar un pipeline de Nextflow en un caso real: Ejecución, revisión e interpretación](#9-lanzar-un-pipeline-de-nextflow-en-un-caso-real-ejecución-revisión-e-interpretación)
-      - [9. BONUS: Caso práctico: Descarga con nf-core/fetchngs y preprocesamiento con fastp](#10-bonus-caso-práctico-descarga-con-nf-corefetchngs-y-preprocesamiento-con-fastp)
+      - [8. Lanzar un pipeline de Nextflow en un caso real: Ejecución, revisión e interpretación](#8-lanzar-un-pipeline-de-nextflow-en-un-caso-real-ejecución-revisión-e-interpretación)
+      - [9. BONUS: Caso práctico: Descarga con nf-core/fetchngs y preprocesamiento con fastp](#9-bonus-caso-práctico-descarga-con-nf-corefetchngs-y-preprocesamiento-con-fastp)
 
 ### Descripción
 
