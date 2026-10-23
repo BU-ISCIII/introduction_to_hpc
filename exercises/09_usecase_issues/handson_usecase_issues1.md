@@ -15,8 +15,8 @@ BU-ISCIII
       - [5. Problemas de espacio](#5-problemas-de-espacio)
       - [6. Permisos de las distintas particiones](#6-permisos-de-las-distintas-particiones)
       - [7. Gestión de ficheros](#7-gestión-de-ficheros)
-      - [9. Lanzar un pipeline de Nextflow en un caso real: Ejecución, revisión e interpretación](#9-lanzar-un-pipeline-de-nextflow-en-un-caso-real-ejecución-revisión-e-interpretación)
-      - [10. BONUS: Caso práctico: Descarga con nf-core/fetchngs y preprocesamiento con fastp](#10-bonus-caso-práctico-descarga-con-nf-corefetchngs-y-preprocesamiento-con-fastp)
+      - [8. Lanzar un pipeline de Nextflow en un caso real: Ejecución, revisión e interpretación](#8-lanzar-un-pipeline-de-nextflow-en-un-caso-real-ejecución-revisión-e-interpretación)
+      - [9. BONUS: Caso práctico: Descarga con nf-core/fetchngs y preprocesamiento con fastp](#9-bonus-caso-práctico-descarga-con-nf-corefetchngs-y-preprocesamiento-con-fastp)
 
 ### Descripción
 
@@ -455,7 +455,7 @@ Recomendaciones:
 - Mantener `logs/` en data y solo temporales/pesados en scratch.
 - Automatizar con `rsync` y revisar siempre en modo `--dry-run` antes de borrar.
 
-#### 9. Lanzar un pipeline de Nextflow en un caso real: Ejecución, revisión e interpretación
+#### 8. Lanzar un pipeline de Nextflow en un caso real: Ejecución, revisión e interpretación
 
 Vamos a hacer un análisis real de un workflow en bioinformática automatizado con Nextflow y listo para ser utilizado en la infraestructura HPC. Este pipeline se llama [nf-core/bacass](https://nf-co.re/bacass/2.4.0), y realiza un control de calidad, ensamblado y anotación de genomas con multitud de herramientas.
 
@@ -491,12 +491,12 @@ cd 09-use-cases
 
 # You need to modify the --chdir above to point to your ANALYSIS directory
 module purge
-module load Nextflow/24.04.2
+module load Nextflow/26.04.3
 module load singularity
 
 mkdir -p 01-nextflow-bacass-results-test
 nextflow run nf-core/bacass \
-  -r 2.4.0 \
+  -r 2.6.1 \
   -profile test,singularity \
   -c nextflow.config \
   --outdir 01-nextflow-bacass-results-test \
@@ -628,7 +628,7 @@ process {
 }
 ```
 
-#### 10. BONUS: Caso práctico: Descarga con nf-core/fetchngs y preprocesamiento con fastp
+#### 9. BONUS: Caso práctico: Descarga con nf-core/fetchngs y preprocesamiento con fastp
 
 Objetivo: descargar tres runs SRA con `nf-core/fetchngs` (ERR2261314, ERR2261315, ERR2261318) dentro de `RAW/`, preparar `00-reads/` y ejecutar `fstp` usando solo Singularity.
 
