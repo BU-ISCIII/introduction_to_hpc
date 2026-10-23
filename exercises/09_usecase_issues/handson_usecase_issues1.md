@@ -491,12 +491,12 @@ cd 09-use-cases
 
 # You need to modify the --chdir above to point to your ANALYSIS directory
 module purge
-module load Nextflow/24.04.2
+module load Nextflow/26.04.3
 module load singularity
 
 mkdir -p 01-nextflow-bacass-results-test
 nextflow run nf-core/bacass \
-  -r 2.4.0 \
+  -r 2.6.1 \
   -profile test,singularity \
   -c nextflow.config \
   --outdir 01-nextflow-bacass-results-test \
