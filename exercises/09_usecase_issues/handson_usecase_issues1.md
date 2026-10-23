@@ -31,14 +31,14 @@ Vamos a intentar reservar más recursos de los disponibles para comprobar cómo 
 Para ver los recursos límite de los nodos de los que disponemos podemos ejecutar: `sinfo -o "%25N  %10c  %20m  %30G"`:
 
 ```bash
-NODELIST                                            CPUS        MEMORY                GRES                           
+NODELIST                                            CPUS        MEMORY                GRES
 ideafix[01-32]                                      32          385000+               local_scratch:880G
 ```
 
 Para ver la información de las particiones ejecutamos `sinfo`:
 
 ```bash
-$ sinfo 
+$ sinfo
 PARTITION  AVAIL  TIMELIMIT  NODES  STATE NODELIST
 long_idx      up 10-00:00:0      7  drain ideafix[01,04,08,10-13]
 long_idx      up 10-00:00:0      1    mix ideafix16
@@ -111,7 +111,7 @@ Pero si observamos nuestra cola veremos:
 4787287 MORE_TIME                                                                   PENDING  s.varona   bi    short_idx  17928    1     2-00:00:00  0:00     1       4G      (PartitionTimeLimit)
 ```
 
-Nos sale `PartitionTimeLimit` y nunca va a ejecutarse. Hay que matar el trabajo con `scancel JOB_ID`. El numero es el JOB_ID del gestor de colas.
+Nos sale `PartitionTimeLimit` y nunca va a ejecutarse. Hay que matar el trabajo con `scancel JOB_ID`, puede ser que se mate solo al tiempo pero hay que comprobarlo siempre. El numero es el JOB_ID del gestor de colas.
 
 Recomendaciones:
 
@@ -346,7 +346,7 @@ Scripts y alias propuestos (guardar en `~/bin` o añadir a `~/.bashrc`):
   Usa el script proporcionado en este enlace: <a href="./hpc_cp.sh" target="_blank">exercises/09_usecase_issues/hpc_cp.sh</a>.
 
   Cópialo al nodo de acceso como `~/bin/hpc_cp.sh` y dale permisos: `chmod +x ~/bin/hpc_cp.sh`. P.e desde tu máquina local donde tengas los scripts:
-  
+
   ```bash
   scp -P 32122 *.sh profesor00@portutatis.isciii.es:/home/hpc_course/profesor00/bin
   ```
@@ -705,7 +705,7 @@ process {
   cpus          = 1            // CPUs por tarea
   memory        = '2 GB'       // Memoria por tarea
   time          = '1h'        // Límite por tarea
-  jobName       = { "${task.process} (${task.name})" }  // Nombre legible en la cola    
+  jobName       = { "${task.process} (${task.name})" }  // Nombre legible en la cola
   errorStrategy = { task.exitStatus in [140,143,137,138,104,134,139] ? 'retry' : 'finish' }
   maxRetries    = 1
   maxErrors     = -1
