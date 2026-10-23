@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=4       # <-- nº procesos MPI por nodo
 #SBATCH --cpus-per-task=2         # dos hilos por proceso MPI híbrido
 #SBATCH --mem=8G
-#SBATCH --time=00:30:00
+#SBATCH --time=02:30:00
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
