@@ -736,7 +736,7 @@ module load singularity
 export NXF_SINGULARITY_CACHEDIR="$HOME/containers/singularity"
 
 # Ejecuta el pipeline descargado en $HOME/software/nfcore/fetchngs
-nextflow run "$HOME/software/nfcore/fetchngs/1_12_0/main.nf" \
+nextflow run "$HOME/software/nfcore/fetchngs/1_13_0/main.nf" \
   -profile singularity \
   -c ../DOC/nextflow.config \
   --input sra_ids.csv \
