@@ -343,7 +343,7 @@ fi
 alias si="sinfo -o \"%20P %5D %14F %8z %10m %10d %11l %16f %N\""
 alias sq="squeue -o \"%8i %12j %4t %10u %20q %20a %10g %20P %10Q %5D %11l %11L %50R %10C %c\""
 alias sa="squeue -u smonzon"
-alias scratch="srun --partition short_idx --nodelist ideafix02 --pty bash; cd /scratch"
+alias scratch="srun --partition short_idx --chdir /scratch/hpc_course --pty bash"
 
 export NXF_SINGULARITY_CACHEDIR=/data/courses/hpc_course/pipelines/singularity-images
 export LC_ALL="en_US.UTF-8"

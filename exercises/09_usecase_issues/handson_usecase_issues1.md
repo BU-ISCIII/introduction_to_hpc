@@ -383,6 +383,8 @@ Scripts y alias propuestos (guardar en `~/bin` o añadir a `~/.bashrc`):
   Añadir al final de `~/.bashrc` y recargar con `source ~/.bashrc`:
 
   ```bash
+  # Elimina el alias anterior, si estaba definido, antes de crear la función.
+  unalias scratch 2>/dev/null
   scratch() {
     srun --partition=short_idx \
          --time=00:30:00 \
@@ -392,6 +394,17 @@ Scripts y alias propuestos (guardar en `~/bin` o añadir a `~/.bashrc`):
          --pty bash -l
   }
   ```
+
+  Ejecuta `scratch` desde el nodo de acceso. Cuando se asigne el recurso, aparecerá
+  un nuevo prompt: la sesión interactiva ya está abierta y espera tus comandos.
+  Comprueba el nodo y el directorio con `hostname` y `pwd`; este último debe mostrar
+  `/scratch/hpc_course`. Usa `exit` para volver al nodo de acceso.
+
+  Si al pegar la función aparece un prompt `>` y no se ejecuta nada, Bash está
+  esperando que cierres una comilla, una llave o un comando incompleto. Pulsa
+  `Ctrl+C`, vuelve a pegar el bloque completo (sin las líneas de triple acento
+  del Markdown) y recarga con `source ~/.bashrc`. Puedes comprobar la sintaxis
+  antes de recargar con `bash -n ~/.bashrc` y la definición cargada con `type scratch`.
 
 - Script `cleanup_scratch.sh`: limpieza segura con dos modos
 
@@ -729,7 +742,7 @@ cat > fetchngs.sbatch << "SLURM"
 
 set -euo pipefail
 module purge
-module load Nextflow/24.04.2
+module load Nextflow/26.04.3
 module load singularity
 
 # Usa caché de imágenes en $HOME
