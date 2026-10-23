@@ -777,14 +777,6 @@ Realiza la monitorización del job y vigila los logs. Cuando termine, verifica q
 
 1. Preparar `ANALYSIS/00-reads/`
 
-- Copia o enlaza los FASTQ de `RAW/` a `ANALYSIS/00-reads/` (ajusta patrones si tus ficheros difieren):
-
-```bash
-cd $(date +%Y%m%d)_HPC-COURSE-FASTP_${USER}/ANALYSIS/00-reads
-cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/fastq/*_%_1.fastq.gz %_R1.fastq.gz" | bash
-cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/fastq/*_%_2.fastq.gz %_R2.fastq.gz" | bash
-```
-
 - Crea un `samples_id.txt`:
 
 ```bash
@@ -795,6 +787,14 @@ ERR2261315
 ERR2261318
 EOF
 
+```
+
+- Copia o enlaza los FASTQ de `RAW/` a `ANALYSIS/00-reads/` (ajusta patrones si tus ficheros difieren):
+
+```bash
+cd $(date +%Y%m%d)_HPC-COURSE-FASTP_${USER}/ANALYSIS/00-reads
+cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/fastq/*_%_1.fastq.gz %_R1.fastq.gz" | bash
+cat ../samples_id.txt | xargs -I % echo "ln -s ../../RAW/fastq/*_%_2.fastq.gz %_R2.fastq.gz" | bash
 ```
 
 1. Crear un script de sbatch para ejecutar fastp en la carpeta 01-fastp. Utiliza la imagen de singularity que te descargaste en la pŕactica 6.
