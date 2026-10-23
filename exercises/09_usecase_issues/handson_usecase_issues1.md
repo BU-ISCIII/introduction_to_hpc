@@ -584,12 +584,12 @@ Crea el script sbatch master que controlará la ejecución de nextflow. Llamarem
 
 # Tienes que ajustar --chdir para que apunte a tu ANALYSIS en la configuración de arriba
 module purge
-module load Nextflow/24.04.2
+module load Nextflow/26.04.3
 module load singularity
 
 mkdir -p 02-nextflow-bacass-results
 nextflow run nf-core/bacass \
-  -r 2.4.0 \
+  -r 2.6.1 \
   -profile test,singularity \
   -c nextflow.config \
   --input samplesheet.csv \
